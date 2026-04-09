@@ -33,6 +33,15 @@ const markerImages = {
 
 var map = new kakao.maps.Map(container, options);
 
+// ===== 선 그리기용 변수 =====
+let clickPath = [];
+
+let polyline = new kakao.maps.Polyline({
+    strokeWeight: 5,
+    strokeOpacity: 0.8,
+    strokeStyle: 'solid'
+});
+
 // 인포윈도우 하나만 생성 (재사용)
 var infowindow = new kakao.maps.InfoWindow({
     removable: false
@@ -77,6 +86,21 @@ fetch("poi.json")
                     poi.lng
                 ),
                 image: markerImages[poi.type]
+            });
+            // ⭐ 마커 클릭 시 선 그리기
+            kakao.maps.event.addListener(marker, "click", function () {
+
+                var position = marker.getPosition();
+
+                clickPath.push(position);
+
+                polyline.setOptions({
+                    path: clickPath,
+                    strokeColor: "#FF4757"
+                });
+
+                polyline.setMap(map);
+
             });
             // 마우스 올리면 인포윈도우 열기
             kakao.maps.event.addListener(marker, "mouseover", function () {
@@ -185,7 +209,7 @@ fetch("poi.json")
         document.getElementById("stairCount").innerText = stairCount;
         document.getElementById("elevatorCount").innerText = elevatorCount;
         document.getElementById("crosswalkCount").innerText = crosswalkCount;
-        updateMarkers();  
+        updateMarkers();
 
     });
 /* 올체크 */
@@ -202,5 +226,13 @@ document.getElementById("allCheck").addEventListener("change", function () {
         }
 
     });
+
+});
+
+// ⭐ 지도 우클릭 시 선 초기화
+kakao.maps.event.addListener(map, "rightclick", function () {
+
+    clickPath = [];
+    polyline.setMap(null);
 
 });
