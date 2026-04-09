@@ -87,19 +87,35 @@ fetch("poi.json")
                 ),
                 image: markerImages[poi.type]
             });
-            // ⭐ 마커 클릭 시 선 그리기
+            // 마커 클릭 시 선 그리기
             kakao.maps.event.addListener(marker, "click", function () {
 
                 var position = marker.getPosition();
 
-                clickPath.push(position);
+                // 마지막 점 가져오기
+                var lastPosition = clickPath[clickPath.length - 1];
 
-                polyline.setOptions({
-                    path: clickPath,
-                    strokeColor: "#FF4757"
-                });
+                // 같은 마커를 다시 클릭한 경우 → 마지막 경로 취소
+                if (
+                    lastPosition &&
+                    lastPosition.getLat() === position.getLat() &&
+                    lastPosition.getLng() === position.getLng()
+                ) {
+                    clickPath.pop(); // 마지막 점 제거
+                } else {
+                    clickPath.push(position); // 새로운 점 추가
+                }
 
-                polyline.setMap(map);
+                // 경로 업데이트
+                if (clickPath.length > 0) {
+                    polyline.setOptions({
+                        path: clickPath,
+                        strokeColor: "#FF4757"
+                    });
+                    polyline.setMap(map);
+                } else {
+                    polyline.setMap(null); // 점이 없으면 선 제거
+                }
 
             });
             // 마우스 올리면 인포윈도우 열기
