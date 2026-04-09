@@ -33,6 +33,11 @@ const markerImages = {
 
 var map = new kakao.maps.Map(container, options);
 
+// 인포윈도우 하나만 생성 (재사용)
+var infowindow = new kakao.maps.InfoWindow({
+    removable: false
+});
+
 /*json 파일 가져오기*/
 fetch("poi.json")
     .then(res => res.json())
@@ -73,13 +78,29 @@ fetch("poi.json")
                 ),
                 image: markerImages[poi.type]
             });
+            // 마우스 올리면 인포윈도우 열기
+            kakao.maps.event.addListener(marker, "mouseover", function () {
+
+                var content =
+                    "<div style='padding:5px; font-size:12px;'>" +
+                    "ID: " + poi.id + "<br>" +
+                    poi.name +
+                    "</div>";
+
+                infowindow.setContent(content);
+                infowindow.open(map, marker);
+
+            });
+
+            // 마우스 내리면 인포윈도우 닫기
+            kakao.maps.event.addListener(marker, "mouseout", function () {
+                infowindow.close();
+            });
 
             markers.push({
                 marker: marker,
                 type: poi.type
             });
-            
-            
         });
         function updateMarkers() {
 
@@ -157,14 +178,15 @@ fetch("poi.json")
 
         document.getElementById("allCheck")
             .addEventListener("change", updateMarkers);
-        
+
         document.getElementById("totalPoi").innerText = markers.length;
         document.getElementById("entranceCount").innerText = entranceCount;
         document.getElementById("rampCount").innerText = rampCount;
         document.getElementById("stairCount").innerText = stairCount;
         document.getElementById("elevatorCount").innerText = elevatorCount;
         document.getElementById("crosswalkCount").innerText = crosswalkCount;
-        
+        updateMarkers();  
+
     });
 /* 올체크 */
 document.getElementById("allCheck").addEventListener("change", function () {
