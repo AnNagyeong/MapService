@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>POI 타입별 마커 및 경로 그리기</title>
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; }
+        #map { width: 100%; height: 100vh; } 
+        .label-tag {
+            padding: 5px 10px; background: #2f3542; color: white;
+            border-radius: 8px; font-size: 12px; font-weight: bold;
+            white-space: nowrap; box-shadow: 0px 3px 6px rgba(0,0,0,0.3);
+            pointer-events: none; border: 1px solid #ffffff;
+        }
+        .info-box {
+            position: absolute; top: 15px; left: 15px; z-index: 10;
+            background: rgba(255, 255, 255, 0.9); padding: 12px; border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15); font-size: 13px; line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+
+<div class="info-box">
+    🖱️ <b>좌클릭</b>: 지점 연결 (경로 그리기)<br>
+    🖱️ <b>우클릭</b>: 모든 경로 초기화
+</div>
+<div id="map"></div>
+
+<script type="text/javascript" src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=ad09fd5b93dfb8b2057b28868da01810"></script>
+
+<script>
+    const mapContainer = document.getElementById('map'); 
+    const mapOption = { 
+        center: new kakao.maps.LatLng(37.5585, 127.0491), 
+        level: 3 
+    };
+
+    const map = new kakao.maps.Map(mapContainer, mapOption); 
+    let clickPath = []; 
+    let polyline = new kakao.maps.Polyline({ 
+        strokeWeight: 5,
+        strokeOpacity: 0.8,
+        strokeStyle: 'solid'
+    });
+
+    // 1. 비율이 깨지지 않는 안정적인 마커 이미지 주소 세팅
+    const markerImages = {
+        // 노란 별 (입구)
+        'entrance': 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/markerStar.png', 
+        // 파란색 기본 마커 (횡단보도)
+        'crosswalk': 'https://t1.daumcdn.net/mapjsapi/images/2x/marker.png', 
+        // 빨간색 기본 마커 (경사로) - 카카오맵 기본 마커의 다른 색상 버전
+        'ramp': 'https://t1.daumcdn.net/localimg/localimages/07/mapapidoc/marker_red.png', 
+        // 회색 기본 마커 (기본값)
+        'default': 'https://t1.daumcdn.net/mapjsapi/images/2x/marker_default.png'
+    };
+
+    fetch('poi.json')
+        .then(res => res.json())
+        .then(data => {
+            data.forEach(item => {
+                const position = new kakao.maps.LatLng(item.lat, item.lng);
+
+                // 마커 이미지 설정 (깨짐 방지를 위한 핵심 수정 부분)
+                const imageSrc = markerImages[item.type] || markerImages['default'];
+                
+                // 원본 이미지 비율에 맞는 적절한 크기 설정 ($29 \times 42$ 비율이 가장 안정적)
+                const imageSize = new kakao.maps.Size(29, 42); 
+                const markerImage = new kakao.maps.MarkerImage(imageSrc, imageSize);
+
+                const marker = new kakao.maps.Marker({
+                    position: position,
+                    image: markerImage,
+                    map: map
+                });
+
+                const content = `<div class="label-tag">${item.name}</div>`;
+                const overlay = new kakao.maps.CustomOverlay({
+                    position: position,
+                    content: content,
+                    yAnchor: 2.5 
+                });
+
+                // 마우스 오버/아웃 토글
+                kakao.maps.event.addListener(marker, 'mouseover', () => overlay.setMap(map));
+                kakao.maps.event.addListener(marker, 'mouseout', () => overlay.setMap(null));
+
+                // 마커 클릭 시 경로 추가
+                kakao.maps.event.addListener(marker, 'click', function() {
+                    clickPath.push(position);
+                    
+                    // 선 색상 결정
+                    let color = '#FF4757'; // 기본 빨강 (ramp 클릭 시)
+                    if (item.type === 'entrance') color = '#F4D03F'; // 노랑
+                    if (item.type === 'crosswalk') color = '#1E90FF'; // 파랑
+
+                    polyline.setOptions({
+                        path: clickPath,
+                        strokeColor: color
+                    });
+                    polyline.setMap(map);
+                });
+            });
+        });
+
+    // 초기화 기능 (지도 위 오른쪽 클릭)
+    kakao.maps.event.addListener(map, 'rightclick', function() {
+        clickPath = []; 
+        polyline.setMap(null); 
+        alert('선 그리기가 초기화되었습니다.');
+    });
+</script>
+</body>
+</html>
