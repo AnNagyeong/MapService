@@ -1,4 +1,4 @@
--- 1. POI (지점 정보)
+-- 📌 1. POI (지점 정보)
 CREATE TABLE poi (
     poi_id VARCHAR(36) PRIMARY KEY, -- UUID
     poi_name VARCHAR(100) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE poi (
     is_interior BOOLEAN DEFAULT FALSE
 );
 
--- 2. PATH_CONNECTION (경로 연결 - 유향 그래프)
+-- 📌 2. PATH_CONNECTION (경로 연결 - 유향 그래프)
 CREATE TABLE path_connection (
     start_poi_id VARCHAR(36),
     end_poi_id VARCHAR(36),
@@ -25,13 +25,13 @@ CREATE TABLE path_connection (
     FOREIGN KEY (end_poi_id) REFERENCES poi(poi_id)
 );
 
--- 3. USER (사용자 - 다이어그램 기반 추가)
+-- 📌 3. USER (사용자 - 다이어그램 기반 추가)
 CREATE TABLE user (
     user_id VARCHAR(50) PRIMARY KEY,
     user_type ENUM('Requester', 'Volunteer') NOT NULL
 );
 
--- 4. FACILITY (편의시설 - 다이어그램 속성 반영)
+-- 📌 4. FACILITY (편의시설 - 다이어그램 속성 반영)
 CREATE TABLE facility (
     facility_id VARCHAR(36) PRIMARY KEY,
     facility_name VARCHAR(100),             -- 편의 시설 이름(사용자에게 보여짐)
@@ -43,7 +43,7 @@ CREATE TABLE facility (
     FOREIGN KEY (poi_id) REFERENCES poi(poi_id)
 );
 
--- 5. USER_REPORT (사용자 제보)
+-- 📌 5. USER_REPORT (사용자 제보)
 CREATE TABLE user_report (
     report_id VARCHAR(36) PRIMARY KEY,
     user_id VARCHAR(50),   
@@ -59,7 +59,7 @@ CREATE TABLE user_report (
     FOREIGN KEY (user_id) REFERENCES user(user_id)
 );
 
--- 6. EMERGENCY_MATCH (긴급 매칭)
+-- 📌 6. EMERGENCY_MATCH (긴급 매칭)
 CREATE TABLE emergency_match (
     request_id VARCHAR(36) PRIMARY KEY,
     requester_id VARCHAR(50),
