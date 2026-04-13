@@ -102,6 +102,8 @@ RDB의 정적인 테이블 구조를 Neo4j의 **유연한 노드(Node)와 관계
 
 3. 시설물 연결: `FACILITY_DETAIL` 정보는 별도의 노드 혹은 POI의 속성으로 매핑되어 `-[:LOCATED_AT]->` 관계로 연결됩니다.
 
+![Neo4j 데이터 모델 플로우](img/Neo4j_flow.png)
+
 ---
 
 ## 📌 3. 핵심 설계 포인트
