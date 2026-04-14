@@ -1,4 +1,4 @@
-# 📍 [캡스톤 디자인] Barrier-Free 지도 서비스 DB 설계
+# 📍 Barrier-Free 지도 서비스 DB 설계
 
 본 문서는 교통약자의 이동권 보장을 위한 내비게이션 시스템의 **논리 데이터 모델(RDB)** 과 이를 **그래프 데이터베이스(Neo4j)** 로 매핑하는 과정을 다룹니다.
 즉, **"데이터 관리는 MySQL에서 안전하게, 길 찾기는 Neo4j에서 빠르게"**
@@ -103,6 +103,73 @@ RDB의 정적인 테이블 구조를 Neo4j의 **유연한 노드(Node)와 관계
 3. 시설물 연결: `FACILITY_DETAIL` 정보는 별도의 노드 혹은 POI의 속성으로 매핑되어 `-[:LOCATED_AT]->` 관계로 연결됩니다.
 
 ![Neo4j 데이터 모델 플로우](img/Neo4j_flow.png)
+
+
+```mermaid
+flowchart TD
+    %% 1. 노드 정의 (모양 설정)
+    START([START])
+    UserPos[사용자 위치 확인]
+    SetRoute{경로 설정?}
+    Input[출발지/도착지 입력]
+    Explore[경로 탐색]
+    Show[경로 표시]
+    Nearby[주변 정보 확인]
+    FacilDec{시설물 선택?}
+    Filter[시설물 필터링]
+    Detail[상세 정보 확인]
+    ReportDec{제보 기능 활용?}
+    ReportIn[시설물/경로 제보]
+    Send[제보 데이터 전송]
+    END([END])
+
+    GPS_API((외부 GPS API))
+    Poi_API((외부 장소 API))
+    DB[(시스템 DB)]
+
+    %% 2. 흐름 연결
+    START --> UserPos
+    UserPos <--> GPS_API
+    UserPos --> SetRoute
+
+    SetRoute -- "Yes" --> Input
+    SetRoute -- "No" --> Nearby
+
+    Input --> Explore
+    Explore <--> DB
+    Explore --> Show
+    Show --> Nearby
+
+    Nearby <--> Poi_API
+    Nearby --> FacilDec
+
+    FacilDec -- "Yes" --> Detail
+    FacilDec -- "No" --> Filter
+
+    Detail <--> DB
+    Detail --> ReportDec
+    Filter --> ReportDec
+
+    ReportDec -- "Yes" --> ReportIn
+    ReportDec -- "No" --> END
+
+    ReportIn --> Send
+    Send --> DB
+    Send --> END
+
+    %% 3. 스타일 설정 (클래스 정의)
+    classDef userStyle fill:#C6EFCD,stroke:#006100,stroke-width:2px
+    classDef systemStyle fill:#DCE6F1,stroke:#385D8A,stroke-width:2px
+    classDef dbStyle fill:#FFEB9C,stroke:#9C6500,stroke-width:2px
+    classDef apiStyle fill:#FFC7CE,stroke:#9C0006,stroke-width:2px
+
+    %% 4. 클래스 적용
+    class START,UserPos,SetRoute,Input,Nearby,FacilDec,Filter,ReportDec,ReportIn,END userStyle
+    class Explore,Show,Detail systemStyle
+    class DB dbStyle
+    class GPS_API,Poi_API apiStyle
+    ```
+
 
 ---
 
