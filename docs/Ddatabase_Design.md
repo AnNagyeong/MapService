@@ -104,6 +104,8 @@ RDB의 정적인 테이블 구조를 Neo4j의 **유연한 노드(Node)와 관계
 
 ![Neo4j 데이터 모델 플로우](img/Neo4j_flow.png)
 
+---
+
 
 ```mermaid
 flowchart TD
