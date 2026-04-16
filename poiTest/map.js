@@ -28,6 +28,10 @@ const markerImages = {
     crosswalk: new kakao.maps.MarkerImage(
         "images/pinkMarker.png",
         imageSize
+    ),
+    path: new kakao.maps.MarkerImage(
+        "images/greyMarker.png",
+        imageSize
     )
 };
 
@@ -60,6 +64,8 @@ fetch("poi.json")
         var stairCount = 0;
         var elevatorCount = 0;
         var crosswalkCount = 0;
+        var pathCount = 0;
+
         /* 타입별 갯수*/
         poi.forEach(poi => {
             switch (poi.type) {
@@ -77,6 +83,9 @@ fetch("poi.json")
                     break;
                 case "crosswalk":
                     crosswalkCount++;
+                    break;
+                case "path":
+                    pathCount++;
                     break;
             }
             var marker = new kakao.maps.Marker({
@@ -149,6 +158,7 @@ fetch("poi.json")
             var rampChecked = document.getElementById("rampCheck").checked;
             var stairChecked = document.getElementById("stairCheck").checked;
             var elevatorChecked = document.getElementById("elevatorCheck").checked;
+            var pathChecked = document.getElementById("pathCheck").checked;
 
             var visibleCount = 0;
 
@@ -161,6 +171,7 @@ fetch("poi.json")
                 if (item.type === "ramp" && rampChecked) show = true;
                 if (item.type === "stair" && stairChecked) show = true;
                 if (item.type === "elevator" && elevatorChecked) show = true;
+                if (item.type === "path" && pathChecked) show = true;
 
                 if (show) {
                     item.marker.setMap(map);
@@ -179,6 +190,7 @@ fetch("poi.json")
                 var stairChecked = document.getElementById("stairCheck").checked;
                 var elevatorChecked = document.getElementById("elevatorCheck").checked;
                 var crosswalkChecked = document.getElementById("crosswalk").checked;
+                var pathChecked = document.getElementById("pathCheck").checked;
 
                 // 하나라도 false면 all 해제
                 if (
@@ -186,7 +198,8 @@ fetch("poi.json")
                     rampChecked &&
                     stairChecked &&
                     elevatorChecked &&
-                    crosswalkChecked
+                    crosswalkChecked &&
+                    pathChecked
                 ) {
                     allCheck.checked = true;
                 } else {
@@ -216,6 +229,9 @@ fetch("poi.json")
         document.getElementById("elevatorCheck")
             .addEventListener("change", updateMarkers);
 
+        document.getElementById("pathCheck")
+            .addEventListener("change", updateMarkers);
+
         document.getElementById("allCheck")
             .addEventListener("change", updateMarkers);
 
@@ -225,6 +241,7 @@ fetch("poi.json")
         document.getElementById("stairCount").innerText = stairCount;
         document.getElementById("elevatorCount").innerText = elevatorCount;
         document.getElementById("crosswalkCount").innerText = crosswalkCount;
+        document.getElementById("pathCount").innerText = pathCount;
         updateMarkers();
 
     });

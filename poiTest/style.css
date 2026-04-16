@@ -46,3 +46,7 @@ body {
 .crosswalk {
   color: hotpink;
 }
+
+.path {
+  color :darkgrey;
+}
