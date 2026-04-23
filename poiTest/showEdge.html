@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Graph Test Map</title>
+
+    <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=eb4db54bd30b6f413e520ba38a32845f&libraries=services"></script>
+
+    <style>
+        body { margin: 0; }
+        #map { width: 100vw; height: 100vh; }
+    </style>
+</head>
+
+<body>
+<div id="map"></div>
+
+<script>
+
+/* ===== 지도 ===== */
+const container = document.getElementById('map');
+
+const map = new kakao.maps.Map(container, {
+    center: new kakao.maps.LatLng(37.55843493, 127.04983095),
+    level: 1
+});
+
+/* ===== 마커 이미지 ===== */
+const imageSize = new kakao.maps.Size(32, 32);
+
+const markerImages = {
+    entrance: new kakao.maps.MarkerImage("images/blueMarker.png", imageSize),
+    ramp: new kakao.maps.MarkerImage("images/greenMarker.png", imageSize),
+    stair: new kakao.maps.MarkerImage("images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("images/orangeMarker.png", imageSize),
+    crosswalk: new kakao.maps.MarkerImage("images/pinkMarker.png", imageSize),
+    path: new kakao.maps.MarkerImage("images/greyMarker.png", imageSize)
+};
+
+/* ===== 경로 그리기 ===== */
+let clickPath = [];
+
+const polyline = new kakao.maps.Polyline({
+    strokeWeight: 5,
+    strokeOpacity: 0.8,
+    strokeStyle: 'solid'
+});
+
+/* ===== infowindow ===== */
+const infowindow = new kakao.maps.InfoWindow({
+    removable: false
+});
+
+/* ===== 데이터 저장 ===== */
+let poiData = [];
+let poiMap = {};
+let markers = [];
+let edgeLines = [];
+
+/* ===== POI 로드 ===== */
+fetch("poi.json")
+.then(res => res.json())
+.then(poi => {
+
+    poiData = poi;
+
+    let entranceCount = 0;
+    let rampCount = 0;
+    let stairCount = 0;
+    let elevatorCount = 0;
+    let crosswalkCount = 0;
+    let pathCount = 0;
+
+    poi.forEach(p => {
+
+        /* ===== 좌표 저장 ===== */
+        const position = new kakao.maps.LatLng(p.lat, p.lng);
+        poiMap[p.id] = position;
+
+        /* ===== 타입 카운트 ===== */
+        switch (p.type) {
+            case "entrance": entranceCount++; break;
+            case "ramp": rampCount++; break;
+            case "stair": stairCount++; break;
+            case "elevator": elevatorCount++; break;
+            case "crosswalk": crosswalkCount++; break;
+            case "path": pathCount++; break;
+        }
+
+        /* ===== 마커 생성 ===== */
+        const marker = new kakao.maps.Marker({
+            map: map,
+            position: position,
+            image: markerImages[p.type]
+        });
+
+        /* ===== 클릭 → 경로 ===== */
+        kakao.maps.event.addListener(marker, "click", function () {
+
+            const pos = marker.getPosition();
+            const last = clickPath[clickPath.length - 1];
+
+            if (last &&
+                last.getLat() === pos.getLat() &&
+                last.getLng() === pos.getLng()
+            ) {
+                clickPath.pop();
+            } else {
+                clickPath.push(pos);
+            }
+
+            if (clickPath.length > 0) {
+                polyline.setOptions({
+                    path: clickPath,
+                    strokeColor: "#FF4757"
+                });
+                polyline.setMap(map);
+            } else {
+                polyline.setMap(null);
+            }
+        });
+
+        /* ===== hover ===== */
+        kakao.maps.event.addListener(marker, "mouseover", function () {
+
+            infowindow.setContent(
+                `<div style="padding:5px;font-size:12px;">
+                    ID: ${p.id}<br>${p.name}
+                </div>`
+            );
+
+            infowindow.open(map, marker);
+        });
+
+        kakao.maps.event.addListener(marker, "mouseout", function () {
+            infowindow.close();
+        });
+
+        markers.push({
+            marker,
+            type: p.type
+        });
+
+    });
+
+    /* ===== edge 로드 (⭐ 추가 핵심) ===== */
+    return fetch("edge.json");
+
+})
+.then(res => res.json())
+.then(edges => {
+
+    edges.forEach(edge => {
+
+        const from = poiMap[edge.from];
+        const to = poiMap[edge.to];
+
+        if (!from || !to) return;
+
+        const line = new kakao.maps.Polyline({
+            path: [from, to],
+            strokeWeight: 3,
+            strokeColor: "#FF0000",
+            strokeOpacity: 0.9,
+            strokeStyle: "solid"
+        });
+
+        line.setMap(map);
+        edgeLines.push(line);
+    });
+
+})
+.catch(err => console.error(err));
+
+/* ===== 우클릭 → 경로 초기화 ===== */
+kakao.maps.event.addListener(map, "rightclick", function () {
+    clickPath = [];
+    polyline.setMap(null);
+});
+
+</script>
+</body>
+</html>
