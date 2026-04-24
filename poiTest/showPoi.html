@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <title>map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="showPoi.css">
+</head>
+
+<body>
+    <div id="map"></div>
+
+    <div id="controlBox">
+        설정 박스
+        <hr>
+        <p>
+            총 poi 수 : <span id="totalPoi">0</span>
+            <br>
+            현재 활성 마커 수 : <span id="visibleCount">0</span>
+        </p>
+        <hr>
+        <p></p>
+        <div class="typeGrid">
+            <label>
+                <input type="checkbox" id="allCheck" checked>
+                all
+            </label>
+            <label class="crosswalk">
+                <input type="checkbox" id="crosswalk" checked>
+                crosswalk : <span id="crosswalkCount">0</span>
+            </label>
+            <label class="entrance">
+                <input type="checkbox" id="entranceCheck" checked>
+                entrance : <span id="entranceCount">0</span>
+            </label>
+            <label class="ramp">
+                <input type="checkbox" id="rampCheck" checked>
+                ramp : <span id="rampCount">0</span>
+            </label>
+            <label class="stair">
+                <input type="checkbox" id="stairCheck" checked>
+                stair : <span id="stairCount">0</span>
+            </label>
+            <label class="elevator">
+                <input type="checkbox" id="elevatorCheck" checked>
+                elevator : <span id="elevatorCount">0</span>
+            </label>
+            <label class="path">
+                <input type="checkbox" id="pathCheck" checked>
+                path : <span id="pathCount">0</span>
+            </label>
+            <label class="building">
+                <input type="checkbox" id="buildingCheck" checked>
+                building : <span id="buildingCount">0</span>
+            </label>
+        </div>
+        <hr>
+        <p>
+            🖱️ <b>좌클릭</b>: 지점 연결 (경로 그리기)<br>
+            🖱️ <b>우클릭</b>: 모든 경로 초기화
+        </p>
+        <hr>
+        <input id="searchInput" type="text" placeholder="이름 또는 ID 검색">
+        <button id="searchBtn">검색</button>
+        <ul id="searchList"></ul>
+
+    </div>
+
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=eb4db54bd30b6f413e520ba38a32845f&libraries=services"></script>
+    <script src="showPoi.js"></script>
+</body>
+
+</html>

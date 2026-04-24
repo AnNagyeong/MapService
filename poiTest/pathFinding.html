@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=api 넣으시오"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="pathFinding.css">
+</head>
+
+<body>
+
+  <!-- 사이드 패널 -->
+  <div id="panel">
+
+    <div id="panel-body">
+      <div class="input-group">
+        <label>출발</label>
+        <select id="sel-from"></select>
+      </div>
+
+      <div class="input-group">
+        <label>도착</label>
+        <select id="sel-to"></select>
+      </div>
+
+      <div class="toggle-row">
+        <div class="toggle-label">
+          <span>휠체어 경로</span>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="wheelchair">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+
+      <button id="btn-find" onclick="handleFind()">경로 찾기</button>
+
+      <!-- 결과 -->
+      <div id="result">
+        <div id="result-title">최단 경로</div>
+        <div id="result-distance">—</div>
+        <div id="result-path"></div>
+      </div>
+
+      <!-- 경로 단계 -->
+      <div id="steps"></div>
+    </div>
+  </div>
+
+  <!-- 지도 -->
+  <div id="map">
+    <div id="kakao-map"></div>
+  </div>
+
+  <script src="pathFinding.js"></script>
+</body>
+
+</html>

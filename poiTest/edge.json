@@ -29,7 +29,7 @@
   { "from": 15, "to": 48, "weight": 29.9, "type": "path" },
   { "from": 16, "to": 17, "weight": 11.0, "type": "ramp" },
   { "from": 17, "to": 46, "weight": 12.8, "type": "ramp" },
-  { "from": 18, "to": 45, "weight": 14.8, "type": "path" },
+  { "from": 18, "to": 45, "weight": 14.8, "type": "stair" },
   { "from": 19, "to": 20, "weight": 6.2, "type": "ramp" },
   { "from": 19, "to": 22, "weight": 4.7, "type": "stair" },
   { "from": 20, "to": 21, "weight": 6.8, "type": "ramp" },
