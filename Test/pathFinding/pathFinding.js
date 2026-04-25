@@ -8,8 +8,8 @@ let currentPolyline = null;
 
 //데이터 로드
 Promise.all([
-  fetch("poi.json").then(r => r.json()),
-  fetch("edge.json").then(r => r.json()),
+  fetch("../data/poi.json").then(r => r.json()),
+  fetch("../data/edge.json").then(r => r.json()),
 ])
   .then(([poiData, edgeData]) => {
     EDGES = edgeData;

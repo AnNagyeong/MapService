@@ -6,19 +6,19 @@
 var container = document.getElementById('map');
 var options = {
     center: new kakao.maps.LatLng(37.55843493, 127.04983095),
-    level: 3
+    level: 2
 };
 
 const imageSize = new kakao.maps.Size(32, 32);
 
 const markerImages = {
-    entrance: new kakao.maps.MarkerImage("images/blueMarker.png", imageSize),
-    ramp: new kakao.maps.MarkerImage("images/greenMarker.png", imageSize),
-    stair: new kakao.maps.MarkerImage("images/redMarker.png", imageSize),
-    elevator: new kakao.maps.MarkerImage("images/orangeMarker.png", imageSize),
-    crosswalk: new kakao.maps.MarkerImage("images/pinkMarker.png", imageSize),
-    path: new kakao.maps.MarkerImage("images/greyMarker.png", imageSize),
-    building: new kakao.maps.MarkerImage("images/yellowMarker.png", imageSize)
+    entrance: new kakao.maps.MarkerImage("../images/blueMarker.png", imageSize),
+    ramp: new kakao.maps.MarkerImage("../images/greenMarker.png", imageSize),
+    stair: new kakao.maps.MarkerImage("../images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("../images/orangeMarker.png", imageSize),
+    crosswalk: new kakao.maps.MarkerImage("../images/pinkMarker.png", imageSize),
+    path: new kakao.maps.MarkerImage("../images/greyMarker.png", imageSize),
+    building: new kakao.maps.MarkerImage("../images/yellowMarker.png", imageSize)
 };
 
 var map = new kakao.maps.Map(container, options);
@@ -59,8 +59,8 @@ const NODE_COLORS = {
 
 // ===== 데이터 로드 =====
 Promise.all([
-    fetch("poi.json").then(r => r.json()),
-    fetch("edge.json").then(r => r.json()),
+    fetch("../data/poi.json").then(r => r.json()),
+    fetch("../data/edge.json").then(r => r.json()),
 ])
     .then(([poiData, edgeData]) => {
         allPoi = poiData;

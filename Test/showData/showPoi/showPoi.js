@@ -9,13 +9,13 @@ const imageSize = new kakao.maps.Size(32, 32);
 
 /* 마커 이미지 설정*/
 const markerImages = {
-    entrance: new kakao.maps.MarkerImage("images/blueMarker.png", imageSize),
-    ramp:     new kakao.maps.MarkerImage("images/greenMarker.png", imageSize),
-    stair:    new kakao.maps.MarkerImage("images/redMarker.png", imageSize),
-    elevator: new kakao.maps.MarkerImage("images/orangeMarker.png", imageSize),
-    crosswalk:new kakao.maps.MarkerImage("images/pinkMarker.png", imageSize),
-    path:     new kakao.maps.MarkerImage("images/greyMarker.png", imageSize),
-    building: new kakao.maps.MarkerImage("images/yellowMarker.png", imageSize)
+    entrance: new kakao.maps.MarkerImage("../../images/blueMarker.png", imageSize),
+    ramp:     new kakao.maps.MarkerImage("../../images/greenMarker.png", imageSize),
+    stair:    new kakao.maps.MarkerImage("../../images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("../../images/orangeMarker.png", imageSize),
+    crosswalk:new kakao.maps.MarkerImage("../../images/pinkMarker.png", imageSize),
+    path:     new kakao.maps.MarkerImage("../../images/greyMarker.png", imageSize),
+    building: new kakao.maps.MarkerImage("../../images/yellowMarker.png", imageSize)
 };
 
 var map = new kakao.maps.Map(container, options);
@@ -36,7 +36,7 @@ let allPoi = [];         // 전체 POI 데이터
 let searchMarker = null; // 검색 결과 강조 마커
 
 /*json 파일 가져오기*/
-fetch("poi.json")
+fetch("../../data/poi.json")
     .then(res => res.json())
     .then(poi => {
 

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Edge 관리</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="showEdge.css">
+</head>
+<body>
+
+<div id="map"></div>
+
+<div id="controlBox">
+    <h2>🔗 Edge 관리</h2>
+
+    <!-- 통계 -->
+    <div class="section">
+        <div class="section-title">통계</div>
+        <div id="stats">
+            전체 엣지: <b id="totalEdge">0</b>개<br>
+            표시 중: <b id="visibleEdge">0</b>개<br>
+            선택된 노드: <b id="selectedNode">없음</b>
+        </div>
+    </div>
+
+    <!-- 표시 제어 -->
+    <div class="section">
+        <div class="section-title">표시 제어</div>
+        <div class="btn-row">
+            <button id="btnShowAll" class="active" onclick="showAllEdges()">전체 표시</button>
+            <button id="btnHideAll" onclick="hideAllEdges()">전체 숨기기</button>
+        </div>
+    </div>
+
+    <!-- 타입별 필터 -->
+    <div class="section">
+        <div class="section-title">타입별 필터</div>
+        <div id="typeFilters"></div>
+    </div>
+
+    <!-- 노드 선택 -->
+    <div class="section">
+        <div class="section-title">노드 연결 엣지 보기</div>
+        <input type="number" id="nodeIdInput" placeholder="노드 ID 입력">
+        <div class="btn-row">
+            <button onclick="filterByNode()">해당 노드만</button>
+            <button onclick="clearNodeFilter()">필터 해제</button>
+        </div>
+        <div style="margin-top:6px;color:#888;font-size:11px;">※ 지도에서 마커 클릭해도 됩니다</div>
+    </div>
+
+    <!-- 엣지 추가 -->
+    <div class="section">
+        <div class="section-title">엣지 추가</div>
+        <input type="number" id="addFrom" placeholder="from (노드 ID)">
+        <input type="number" id="addTo" placeholder="to (노드 ID)">
+        <select id="addType">
+            <option value="path">path</option>
+            <option value="ramp">ramp</option>
+            <option value="stair">stair</option>
+            <option value="elevator">elevator</option>
+            <option value="crosswalk">crosswalk</option>
+        </select>
+        <button class="success" onclick="addEdge()" style="width:100%">추가</button>
+    </div>
+
+    <!-- 검증 -->
+    <div class="section">
+        <div class="section-title">데이터 검증</div>
+        <div class="btn-row">
+            <button onclick="validateEdges()">전체 검증</button>
+            <button onclick="checkIsolated()">고립 노드 찾기</button>
+            <button onclick="checkDuplicates()">중복 엣지 찾기</button>
+        </div>
+    </div>
+
+    <!-- JSON 내보내기 -->
+    <div class="section">
+        <div class="btn-row">
+            <button onclick="exportJSON()" class="success">JSON 내보내기</button>
+            <button onclick="clearLog()">로그 지우기</button>
+        </div>
+    </div>
+
+    <!-- 로그 -->
+    <div id="log">
+        <div class="log-item log-info">데이터 로드 대기 중...</div>
+    </div>
+</div>
+
+<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey= API 넣으세요"></script>
+<script src="showEdge.js"></script>
+</body>
+</html>
