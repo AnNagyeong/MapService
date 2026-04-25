@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Node & Edge 관리</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="graphManager.css">
+</head>
+
+<body>
+
+    <div id="map"></div>
+
+    <div id="controlBox">
+
+        <!-- ===== NODE ===== -->
+        <div class="box-title">Node</div>
+
+        <div class="section">
+            총 Node: <b id="totalNode">0</b> &nbsp;|&nbsp; 표시: <b id="visibleCount">0</b>
+        </div>
+
+        <div class="section">
+            <div class="section-title">타입 필터</div>
+            <div id="nodeTypeFilters"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Node 검색</div>
+            <div id="searchWrapper">
+                <input type="text" id="searchInput" placeholder="ID 또는 이름">
+                <ul id="searchList"></ul>
+            </div>
+        </div>
+
+        <!-- ===== EDGE ===== -->
+        <div class="box-title">Edge</div>
+
+        <div class="section">
+            총 Edge: <b id="totalEdge">0</b> &nbsp;|&nbsp; 표시: <b id="visibleEdgeCount">0</b>
+        </div>
+
+        <div class="section">
+            <div class="section-title">표시 제어</div>
+            <div class="btn-row">
+                <button onclick="toggleEdges(true)">전체 표시</button>
+                <button onclick="toggleEdges(false)">전체 숨기기</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">타입 필터</div>
+            <div id="edgeTypeFilters"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">선택 Node 연결 Edge</div>
+            <div id="selectedNodeInfo">없음</div>
+            <div id="nodeIdRow">
+                <input type="number" id="nodeIdInput" placeholder="Node ID">
+                <button onclick="selectNodeById()">적용</button>
+                <button onclick="clearSelection()">해제</button>
+            </div>
+            <div style="margin-bottom:5px;font-size:11px;color:#888;">※ 마커 클릭해도 됩니다</div>
+            <div style="font-size:11px;color:#555;margin-bottom:4px;">연결된 Edge: <b id="connectedEdgeCount">0</b>개</div>
+            <ul id="connectedEdgeList"></ul>
+        </div>
+
+    </div>
+
+    <script type="text/javascript"
+        src="//dapi.kakao.com/v2/maps/sdk.js?appkey= API 넣으세요"></script>
+    <script src="graphManager.js"></script>
+</body>
+
+</html>
