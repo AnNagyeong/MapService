@@ -1,0 +1,11 @@
+#1. Node.js 필수 제외 항목 (보안 및 용량)
+node_modules/
+.env
+
+#2. 운영체제 및 IDE 관련 파일
+.vscode/
+.DS_Store
+Thumbs.db
+
+#3. 로그 및 빌드 결과
+*.log

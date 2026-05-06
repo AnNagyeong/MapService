@@ -57,24 +57,67 @@ const NODE_COLORS = {
     building: "rgb(229, 229, 0)",
 };
 
-// ===== 데이터 로드 =====
+// ===== 데이터 로드 (백엔드 서버 호출) =====
+
+// Promise.all([
+//     fetch("../data/poi.json").then(r => r.json()),
+//     fetch("../data/edge.json").then(r => r.json()),
+// ])
+//     .then(([poiData, edgeData]) => {
+//         allPoi = poiData;
+//         nodeMap = Object.fromEntries(poiData.map(p => [p.id, p]));
+
+//         initNodes(poiData);
+//         initEdges(edgeData);
+//         initEdgeTypeFilters(edgeData);
+
+//         document.getElementById("totalNode").innerText = poiData.length;
+//         document.getElementById("totalEdge").innerText = edgeData.length;
+//     })
+//     .catch(err => console.error("데이터 로드 실패:", err));
+
 Promise.all([
-    fetch("../data/poi.json").then(r => r.json()),
-    fetch("../data/edge.json").then(r => r.json()),
+    fetch("http://localhost:3000/api/poi").then(r => r.json()),
+    fetch("http://localhost:3000/api/edge").then(r => r.json())
 ])
-    .then(([poiData, edgeData]) => {
-        allPoi = poiData;
-        nodeMap = Object.fromEntries(poiData.map(p => [p.id, p]));
+.then(([poiData, edgeData]) => {
+    // 1. POI 데이터 이름표 다시 달기 (Mapping)
+    const formattedPoi = poiData.map(p => ({
+        id: p.poi_id,                   // DB의 poi_id -> 프론트의 id
+        name: p.poi_name,               // DB의 poi_name -> 프론트의 name
+        lat: parseFloat(p.latitude),    // DB의 latitude -> 프론트의 lat
+        lng: parseFloat(p.longitude),   // DB의 longitude -> 프론트의 lng
+        type: p.poi_type                // DB의 poi_type -> 프론트의 type
+    }));
 
-        initNodes(poiData);
-        initEdges(edgeData);
-        initEdgeTypeFilters(edgeData);
+    // 2. Edge 데이터 이름표 다시 달기
+    const formattedEdge = edgeData.map(e => {
+        // effort_level을 보고 기존 type 명칭으로 복구한다
+        let typeStr = 'path';
+        if (e.effort_level === 5) typeStr = 'stair';
+        else if (e.effort_level === 3) typeStr = 'ramp';
 
-        document.getElementById("totalNode").innerText = poiData.length;
-        document.getElementById("totalEdge").innerText = edgeData.length;
-    })
-    .catch(err => console.error("데이터 로드 실패:", err));
+        return {
+            from: e.start_poi_id, // DB의 start_poi_id -> 프론트의 from
+            to: e.end_poi_id,     // DB의 end_poi_id -> 프론트의 to
+            weight: e.distance,   // DB의 distance -> 프론트의 weight
+            type: typeStr
+        };
+    });
 
+    // 3. 변환된 데이터를 기존 시스템에 입력
+    allPoi = formattedPoi;
+    nodeMap = Object.fromEntries(formattedPoi.map(p => [p.id, p]));
+
+    // 4. 지도 초기화 함수 호출
+    initNodes(formattedPoi);
+    initEdges(formattedEdge);
+    initEdgeTypeFilters(formattedEdge);
+
+    document.getElementById("totalNode").innerText = formattedPoi.length;
+    document.getElementById("totalEdge").innerText = formattedEdge.length;
+})
+.catch(err => console.error("데이터 연동 실패:", err));
 
 /* =============================================
    NODE
