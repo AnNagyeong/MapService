@@ -20,6 +20,7 @@ CREATE TABLE path_connection (
     effort_level INT CHECK (effort_level BETWEEN 1 AND 5),
     path_width FLOAT,               -- 휠체어 통과 가능 너비
     is_active BOOLEAN DEFAULT TRUE, -- 실시간 통행 가능 여부
+    photo_url VARCHAR(255),         -- 경로 사진 (선택적)
     PRIMARY KEY (start_poi_id, end_poi_id),
     FOREIGN KEY (start_poi_id) REFERENCES poi(poi_id),
     FOREIGN KEY (end_poi_id) REFERENCES poi(poi_id)
