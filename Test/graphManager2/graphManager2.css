@@ -1,0 +1,301 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    height: 100vh;
+    font-family: sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+}
+
+#map {
+    flex: 1;
+    position: relative;
+    height: 100%;
+}
+
+#controlBox {
+    width: 270px;
+    min-width: 270px;
+    border-left: 1px solid #ccc;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.section {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+}
+
+.section-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.box-title {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    font-weight: bold;
+    border-bottom: 1px solid #ccc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+button {
+    padding: 4px 8px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+button:hover {
+    background: #eee;
+}
+
+button.success {
+    background: #060;
+    color: #fff;
+    border-color: #060;
+}
+
+.btn-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    padding: 4px 7px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+#searchWrapper {
+    position: relative;
+}
+
+#searchInput {
+    width: 100%;
+}
+
+#searchList {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 100;
+    list-style: none;
+}
+
+#searchList li {
+    padding: 5px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#searchList li:hover {
+    background: #f5f5f5;
+}
+
+#selectedNodeInfo {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+#nodeIdRow {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+#nodeIdInput {
+    width: 80px;
+}
+
+#connectedEdgeList {
+    list-style: none;
+    max-height: 100px;
+    overflow-y: auto;
+    font-size: 11px;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+#connectedEdgeList li {
+    padding: 3px 7px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #444;
+}
+
+#connectedEdgeList li:last-child {
+    border-bottom: none;
+}
+
+#validationResult {
+    font-size: 11px;
+    line-height: 1.7;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 6px;
+}
+
+.v-ok {
+    color: #060;
+}
+
+.v-warn {
+    color: #c60;
+}
+
+.v-err {
+    color: #c00;
+}
+
+/* 경로 테스트 */
+.path-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 5px;
+}
+
+.path-row label {
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 28px;
+}
+
+.path-row select,
+.path-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+#pathResult {
+    font-size: 12px;
+    color: #333;
+    margin: 4px 0;
+    line-height: 1.7;
+}
+
+#pathNodeList {
+    list-style: none;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 11px;
+    border: 1px solid #eee;
+    border-radius: 3px;
+    margin-top: 4px;
+}
+
+#pathNodeList li {
+    padding: 3px 7px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #444;
+}
+
+#pathNodeList li.start {
+    color: #060;
+    font-weight: bold;
+}
+
+#pathNodeList li.end {
+    color: #c00;
+    font-weight: bold;
+    border-bottom: none;
+}
+
+.display-radio label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* 경로 선택 탭 */
+.path-tab-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.path-tab {
+    flex: 1;
+    padding: 4px;
+    font-size: 11px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+}
+
+.path-tab.active {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+/* 노드 검색 자동완성 (경로용) */
+.node-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.node-search-wrap input {
+    width: 100%;
+}
+
+.node-autocomplete {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 130px;
+    overflow-y: auto;
+    z-index: 200;
+    list-style: none;
+}
+
+.node-autocomplete li {
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.node-autocomplete li:hover {
+    background: #f5f5f5;
+}
