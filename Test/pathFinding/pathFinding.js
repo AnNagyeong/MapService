@@ -107,7 +107,8 @@ function initMap() {
       title: b.name,
     });
     const infowindow = new kakao.maps.InfoWindow({
-      content: `<div style="padding:6px 10px;font-size:13px;font-weight:600">${b.name}</div>`
+      content: `<div style="padding:6px 10px;font-size:13px;font-weight:600">${b.name}</div>`,
+      removable: true
     });
     kakao.maps.event.addListener(marker, "click", () => {
       infowindow.open(kakaoMap, marker);
