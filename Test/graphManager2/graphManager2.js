@@ -66,24 +66,50 @@ function haversine(lat1, lng1, lat2, lng2) {
 
 // ===== 데이터 로드 =====
 Promise.all([
-    fetch("../data/poi.json").then(r => r.json()),
-    fetch("../data/edge.json").then(r => r.json()),
+    fetch("http://localhost:3000/api/poi").then(r => r.json()),
+    fetch("http://localhost:3000/api/edge").then(r => r.json()),
 ])
-.then(([poiData, edgeData]) => {
-    allPoi       = poiData;
-    buildingList = poiData.filter(p => p.type === "building");
-    nodeMap      = Object.fromEntries(poiData.map(p => [p.id, p]));
+.then(([dbPoiData, dbEdgeData]) => {
+    allPoi = dbPoiData.map(row => {
+        let parsedEntrances = [];
+        if (row.entrances) {
+            try {
+                parsedEntrances = typeof row.entrances === 'string' ? JSON.parse(row.entrances) : row.entrances;
+            } catch (e) {
+                // 공백 제거 방어코드 추가
+                parsedEntrances = row.entrances.split(',').map(s => String(s).trim());
+            }
+        }
 
-    initNodes(poiData);
+        return {
+            id: String(row.poi_id).trim(),             // 공백 제거 방어코드 추가
+            name: row.poi_name,
+            type: row.poi_type,
+            lat: Number(row.latitude),
+            lng: Number(row.longitude),
+            entrances: parsedEntrances
+        };
+    });
+
+    const edgeData = dbEdgeData.map(row => ({
+        from: String(row.start_poi_id).trim(),         // 공백 제거 방어코드 추가
+        to: String(row.end_poi_id).trim(),             // 공백 제거 방어코드 추가
+        type: row.path_type || "path",
+        weight: Number(row.distance)
+    }));
+
+    buildingList = allPoi.filter(p => p.type === "building");
+    nodeMap      = Object.fromEntries(allPoi.map(p => [p.id, p]));
+
+    initNodes(allPoi);
     initEdges(edgeData);
     initEdgeTypeFilters(edgeData);
     initPathSelects();
 
-    document.getElementById("totalNode").innerText = poiData.filter(p => p.type !== "building").length;
+    document.getElementById("totalNode").innerText = allPoi.filter(p => p.type !== "building").length;
     document.getElementById("totalEdge").innerText = edgeData.length;
 })
 .catch(err => console.error("데이터 로드 실패:", err));
-
 
 /* =============================================
    NODE
@@ -192,7 +218,7 @@ function clearSelection() {
 }
 
 function selectNodeById() {
-    const id = Number(document.getElementById("nodeIdInput").value);
+    const id = document.getElementById("nodeIdInput").value.trim();
     if (!nodeMap[id]) { alert(`노드 #${id} 를 찾을 수 없습니다.`); return; }
     selectNode(id);
 }
@@ -499,20 +525,54 @@ function dijkstra(startId, endId, edges, wheelchair) {
     if (!isFinite(dist[endId])) return null;
     const path = [];
     let cur = endId;
-    while (cur !== undefined) { path.unshift(Number(cur)); cur = prev[cur]; }
+    while (cur !== undefined) { path.unshift(String(cur)); cur = prev[cur]; }
     return { path, distance: Math.round(dist[endId]) };
 }
 
-// 건물 간 경로 (입구 조합 중 최단)
+// 💡 [신규 추가] 좌표 기반으로 가장 가까운 특정 타입의 노드 찾기
+function findNearestNode(lat, lng, targetType) {
+    let minDist = Infinity;
+    let nearest = null;
+    allPoi.forEach(p => {
+        if (p.type === targetType) {
+            // 기존에 만들어둔 하버사인 거리 계산 함수 재활용!
+            const d = haversine(lat, lng, p.lat, p.lng);
+            if (d < minDist) { minDist = d; nearest = p; }
+        }
+    });
+    return nearest;
+}
+
+//  건물 간 경로 찾기
 function findPathBuilding(fromB, toB, edges, wheelchair) {
     let best = null;
-    for (const s of fromB.entrances) {
-        for (const e of toB.entrances) {
+    
+    // 1. DB에서 받은 입구 배열 확인
+    let fromEntrances = fromB.entrances && fromB.entrances.length > 0 ? fromB.entrances : [];
+    let toEntrances   = toB.entrances && toB.entrances.length > 0 ? toB.entrances : [];
+
+    // 2. DB에 입구 데이터가 없다면? -> 가장 가까운 'entrance(입구)' 노드를 자동으로 찾아서 연결!
+    if (fromEntrances.length === 0) {
+        const nearest = findNearestNode(fromB.lat, fromB.lng, "entrance");
+        if (nearest) fromEntrances.push(nearest.id);
+        else fromEntrances.push(fromB.id); // 혹시 주변에 입구가 아예 없으면 자기 자신 반환
+    }
+    if (toEntrances.length === 0) {
+        const nearest = findNearestNode(toB.lat, toB.lng, "entrance");
+        if (nearest) toEntrances.push(nearest.id);
+        else toEntrances.push(toB.id);
+    }
+    
+    // 3. 다익스트라 경로 탐색
+    for (const s of fromEntrances) {
+        for (const e of toEntrances) {
             const r = dijkstra(s, e, edges, wheelchair);
-            if (r && (!best || r.distance < best.distance))
+            if (r && (!best || r.distance < best.distance)) {
                 best = { ...r, fromEntrance: s, toEntrance: e };
+            }
         }
     }
+    
     return best;
 }
 
@@ -525,9 +585,10 @@ function runPathTest() {
     let result       = null;
     let labelFrom    = "", labelTo = "";
 
+    // 👉 여기가 중복되어 괄호 에러가 나고 있었습니다! 하나로 수정완료!
     if (pathTab === "building") {
-        const fromId = Number(document.getElementById("pathFromBuilding").value);
-        const toId   = Number(document.getElementById("pathToBuilding").value);
+        const fromId = document.getElementById("pathFromBuilding").value;
+        const toId   = document.getElementById("pathToBuilding").value;
         if (fromId === toId) { resultEl.textContent = "출발지와 도착지가 같습니다."; return; }
         const fromB = buildingList.find(b => b.id === fromId);
         const toB   = buildingList.find(b => b.id === toId);
