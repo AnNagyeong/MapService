@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>카카오 지도</title>
+</head>
+<body>
+  <!-- 지도를 표시할 영역 -->
+  <div id="map" style="width:100%;height:400px;"></div>
+
+  <!-- 카카오 지도 SDK 불러오기 -->
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=발급받은 API Key 이곳에 입력&autoload=false"></script>
+  <script>
+    // 지도 표시할 div와 옵션 설정
+    kakao.maps.load(function () {
+    var container = document.getElementById('map');
+    var options = {
+        center: new kakao.maps.LatLng(37.5665, 126.9780),
+        level: 3
+    };
+    // 지도 생성
+    var map = new kakao.maps.Map(container, options);
+    // 지도 크기 계산 
+    map.relayout();
+});
+  </script>
+</body>
+</html>
