@@ -8,18 +8,18 @@ var map = new kakao.maps.Map(document.getElementById('map'), {
     level: 3
 });
 
-const imageSize    = new kakao.maps.Size(32, 32);
+const imageSize = new kakao.maps.Size(32, 32);
 const isolatedSize = new kakao.maps.Size(38, 38);
 const isolatedImage = new kakao.maps.MarkerImage("../images/redMarker.png", isolatedSize);
 
 const markerImages = {
-    entrance:  new kakao.maps.MarkerImage("../images/blueMarker.png",   imageSize),
-    ramp:      new kakao.maps.MarkerImage("../images/greenMarker.png",  imageSize),
-    stair:     new kakao.maps.MarkerImage("../images/redMarker.png",    imageSize),
-    elevator:  new kakao.maps.MarkerImage("../images/orangeMarker.png", imageSize),
-    crosswalk: new kakao.maps.MarkerImage("../images/pinkMarker.png",   imageSize),
-    path:      new kakao.maps.MarkerImage("../images/greyMarker.png",   imageSize),
-    building:  new kakao.maps.MarkerImage("../images/yellowMarker.png", imageSize)
+    entrance: new kakao.maps.MarkerImage("../images/blueMarker.png", imageSize),
+    ramp: new kakao.maps.MarkerImage("../images/greenMarker.png", imageSize),
+    stair: new kakao.maps.MarkerImage("../images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("../images/orangeMarker.png", imageSize),
+    crosswalk: new kakao.maps.MarkerImage("../images/pinkMarker.png", imageSize),
+    path: new kakao.maps.MarkerImage("../images/greyMarker.png", imageSize),
+    building: new kakao.maps.MarkerImage("../images/yellowMarker.png", imageSize)
 };
 
 const NODE_COLORS = {
@@ -33,34 +33,34 @@ const EDGE_COLORS = {
 };
 
 // ===== 인포윈도우 =====
-var infowindow       = new kakao.maps.InfoWindow({ removable: false });
+var infowindow = new kakao.maps.InfoWindow({ removable: false });
 var searchInfowindow = new kakao.maps.InfoWindow({ removable: true });
-var edgeInfowindow   = new kakao.maps.InfoWindow({ removable: false });
+var edgeInfowindow = new kakao.maps.InfoWindow({ removable: false });
 
 // ===== 전역 상태 =====
 let allPoi = [], markers = [], polylines = [], nodeMap = {}, buildingList = [];
 
-let selectedNodeId   = null;
-let edgesVisible     = true;
+let selectedNodeId = null;
+let edgesVisible = true;
 let nodeFilterActive = false;
-let activeNodeTypes  = new Set();
-let activeEdgeTypes  = new Set();
+let activeNodeTypes = new Set();
+let activeEdgeTypes = new Set();
 let highlightMarkers = [];
 
 // 경로 테스트
 let pathPolyline = null;
-let pathNodeIds  = [];
-let pathDisplay  = "all";
-let pathTab      = "building";   // "building" | "node"
+let pathNodeIds = [];
+let pathDisplay = "all";
+let pathTab = "building";   // "building" | "node"
 let pathFromNodeId = null;       // 노드 직접 선택 모드 - 출발
-let pathToNodeId   = null;       // 노드 직접 선택 모드 - 도착
+let pathToNodeId = null;       // 노드 직접 선택 모드 - 도착
 
 // ===== 거리 계산 =====
 function haversine(lat1, lng1, lat2, lng2) {
     const R = 6371000;
     const p1 = lat1 * Math.PI / 180, p2 = lat2 * Math.PI / 180;
-    const a = Math.sin((lat2-lat1)*Math.PI/360)**2
-            + Math.cos(p1)*Math.cos(p2)*Math.sin((lng2-lng1)*Math.PI/360)**2;
+    const a = Math.sin((lat2 - lat1) * Math.PI / 360) ** 2
+        + Math.cos(p1) * Math.cos(p2) * Math.sin((lng2 - lng1) * Math.PI / 360) ** 2;
     return Math.round(R * 2 * Math.asin(Math.sqrt(a)) * 10) / 10;
 }
 
@@ -69,47 +69,47 @@ Promise.all([
     fetch("http://localhost:3000/api/poi").then(r => r.json()),
     fetch("http://localhost:3000/api/edge").then(r => r.json()),
 ])
-.then(([dbPoiData, dbEdgeData]) => {
-    allPoi = dbPoiData.map(row => {
-        let parsedEntrances = [];
-        if (row.entrances) {
-            try {
-                parsedEntrances = typeof row.entrances === 'string' ? JSON.parse(row.entrances) : row.entrances;
-            } catch (e) {
-                // 공백 제거 방어코드 추가
-                parsedEntrances = row.entrances.split(',').map(s => String(s).trim());
+    .then(([dbPoiData, dbEdgeData]) => {
+        allPoi = dbPoiData.map(row => {
+            let parsedEntrances = [];
+            if (row.entrances) {
+                try {
+                    parsedEntrances = typeof row.entrances === 'string' ? JSON.parse(row.entrances) : row.entrances;
+                } catch (e) {
+                    // 공백 제거 방어코드 추가
+                    parsedEntrances = row.entrances.split(',').map(s => String(s).trim());
+                }
             }
-        }
 
-        return {
-            id: String(row.poi_id).trim(),             // 공백 제거 방어코드 추가
-            name: row.poi_name,
-            type: row.poi_type,
-            lat: Number(row.latitude),
-            lng: Number(row.longitude),
-            entrances: parsedEntrances
-        };
-    });
+            return {
+                id: row.id,
+                name: row.name,
+                type: row.type,
+                lat: row.lat,
+                lng: row.lng,
+                entrances: parsedEntrances
+            };
+        });
 
-    const edgeData = dbEdgeData.map(row => ({
-        from: String(row.start_poi_id).trim(),         // 공백 제거 방어코드 추가
-        to: String(row.end_poi_id).trim(),             // 공백 제거 방어코드 추가
-        type: row.path_type || "path",
-        weight: Number(row.distance)
-    }));
+        const edgeData = dbEdgeData.map(row => ({
+            from: row.from,
+            to: row.to,
+            weight: row.weight,
+            type: row.type
+        }));
 
-    buildingList = allPoi.filter(p => p.type === "building");
-    nodeMap      = Object.fromEntries(allPoi.map(p => [p.id, p]));
+        buildingList = allPoi.filter(p => p.type === "building");
+        nodeMap = Object.fromEntries(allPoi.map(p => [p.id, p]));
 
-    initNodes(allPoi);
-    initEdges(edgeData);
-    initEdgeTypeFilters(edgeData);
-    initPathSelects();
+        initNodes(allPoi);
+        initEdges(edgeData);
+        initEdgeTypeFilters(edgeData);
+        initPathSelects();
 
-    document.getElementById("totalNode").innerText = allPoi.filter(p => p.type !== "building").length;
-    document.getElementById("totalEdge").innerText = edgeData.length;
-})
-.catch(err => console.error("데이터 로드 실패:", err));
+        document.getElementById("totalNode").innerText = allPoi.filter(p => p.type !== "building").length;
+        document.getElementById("totalEdge").innerText = edgeData.length;
+    })
+    .catch(err => console.error("데이터 로드 실패:", err));
 
 /* =============================================
    NODE
@@ -127,7 +127,7 @@ function initNodes(poi) {
             infowindow.open(map, marker);
         });
         kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
-        kakao.maps.event.addListener(marker, "click",    () => selectNode(p.id));
+        kakao.maps.event.addListener(marker, "click", () => selectNode(p.id));
 
         markers.push({ marker, type: p.type, data: p });
     });
@@ -157,12 +157,12 @@ function initNodeTypeFilters(poi) {
         label.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;cursor:pointer;";
         label.innerHTML = `
             <input type="checkbox" checked data-node-type="${type}">
-            <span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block;background:${NODE_COLORS[type]||'#888'}"></span>
+            <span style="width:10px;height:10px;border-radius:50%;flex-shrink:0;display:inline-block;background:${NODE_COLORS[type] || '#888'}"></span>
             ${type} (${typeCounts[type]})
         `;
         label.querySelector("input").addEventListener("change", function () {
             if (this.checked) activeNodeTypes.add(type);
-            else              activeNodeTypes.delete(type);
+            else activeNodeTypes.delete(type);
             syncAllCheck("nodeAllCheck", "input[data-node-type]");
             updateNodeMarkers();
         });
@@ -173,7 +173,7 @@ function initNodeTypeFilters(poi) {
         container.querySelectorAll("input[data-node-type]").forEach(cb => {
             cb.checked = this.checked;
             if (this.checked) activeNodeTypes.add(cb.dataset.nodeType);
-            else              activeNodeTypes.delete(cb.dataset.nodeType);
+            else activeNodeTypes.delete(cb.dataset.nodeType);
         });
         updateNodeMarkers();
     });
@@ -185,9 +185,9 @@ function syncAllCheck(allId, selector) {
 }
 
 function selectNode(id) {
-    selectedNodeId   = id;
+    selectedNodeId = id;
     nodeFilterActive = true;
-    edgesVisible     = true;
+    edgesVisible = true;
     const p = nodeMap[id];
     if (!p) return;
 
@@ -207,9 +207,9 @@ function selectNode(id) {
 }
 
 function clearSelection() {
-    selectedNodeId   = null;
+    selectedNodeId = null;
     nodeFilterActive = false;
-    edgesVisible     = false; // 해제 시 전체 엣지 숨김 유지
+    edgesVisible = false; // 해제 시 전체 엣지 숨김 유지
     document.getElementById("selectedNodeInfo").innerText = "없음";
     document.getElementById("nodeIdInput").value = "";
     document.getElementById("connectedEdgeList").innerHTML = "";
@@ -291,12 +291,12 @@ function initEdgeTypeFilters(edges) {
         label.style.cssText = "display:flex;align-items:center;gap:6px;margin-bottom:4px;font-size:12px;cursor:pointer;";
         label.innerHTML = `
             <input type="checkbox" checked data-edge-type="${type}">
-            <span style="width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;background:${EDGE_COLORS[type]||'#888'}"></span>
+            <span style="width:10px;height:10px;border-radius:50%;display:inline-block;flex-shrink:0;background:${EDGE_COLORS[type] || '#888'}"></span>
             ${type} (${count})
         `;
         label.querySelector("input").addEventListener("change", function () {
             if (this.checked) activeEdgeTypes.add(type);
-            else              activeEdgeTypes.delete(type);
+            else activeEdgeTypes.delete(type);
             syncAllCheck("edgeAllCheck", "input[data-edge-type]");
             applyEdgeFilter();
         });
@@ -307,7 +307,7 @@ function initEdgeTypeFilters(edges) {
         container.querySelectorAll("input[data-edge-type]").forEach(cb => {
             cb.checked = this.checked;
             if (this.checked) activeEdgeTypes.add(cb.dataset.edgeType);
-            else              activeEdgeTypes.delete(cb.dataset.edgeType);
+            else activeEdgeTypes.delete(cb.dataset.edgeType);
         });
         applyEdgeFilter();
     });
@@ -318,7 +318,7 @@ function applyEdgeFilter() {
     polylines.forEach(({ polyline, edge: e }) => {
         const typeOk = activeEdgeTypes.has(e.type);
         const nodeOk = !nodeFilterActive || e.from === selectedNodeId || e.to === selectedNodeId;
-        const show   = edgesVisible && typeOk && nodeOk;
+        const show = edgesVisible && typeOk && nodeOk;
         polyline.setMap(show ? map : null);
         if (show) count++;
     });
@@ -395,7 +395,7 @@ function checkDuplicates() {
     clearHighlight();
     const seen = new Set(), dups = [];
     polylines.forEach(({ edge: e }) => {
-        const key = `${Math.min(e.from,e.to)}-${Math.max(e.from,e.to)}`;
+        const key = `${Math.min(e.from, e.to)}-${Math.max(e.from, e.to)}`;
         if (seen.has(key)) dups.push(e);
         else seen.add(key);
     });
@@ -423,10 +423,10 @@ function checkDuplicates() {
    ============================================= */
 function initPathSelects() {
     const selFrom = document.getElementById("pathFromBuilding");
-    const selTo   = document.getElementById("pathToBuilding");
+    const selTo = document.getElementById("pathToBuilding");
     buildingList.forEach(b => {
         selFrom.innerHTML += `<option value="${b.id}">${b.name}</option>`;
-        selTo.innerHTML   += `<option value="${b.id}">${b.name}</option>`;
+        selTo.innerHTML += `<option value="${b.id}">${b.name}</option>`;
     });
     if (selTo.options.length > 1) selTo.selectedIndex = 1;
 }
@@ -435,9 +435,9 @@ function initPathSelects() {
 function switchPathTab(tab) {
     pathTab = tab;
     document.getElementById("tabBuilding").classList.toggle("active", tab === "building");
-    document.getElementById("tabNode").classList.toggle("active",     tab === "node");
+    document.getElementById("tabNode").classList.toggle("active", tab === "node");
     document.getElementById("modeBuilding").style.display = tab === "building" ? "" : "none";
-    document.getElementById("modeNode").style.display     = tab === "node"     ? "" : "none";
+    document.getElementById("modeNode").style.display = tab === "node" ? "" : "none";
 }
 
 // 노드 직접 선택 — 자동완성
@@ -498,9 +498,9 @@ function dijkstra(startId, endId, edges, wheelchair) {
     const graph = {};
     filtered.forEach(e => {
         if (!graph[e.from]) graph[e.from] = [];
-        if (!graph[e.to])   graph[e.to]   = [];
-        graph[e.from].push({ node: e.to,   weight: e.weight });
-        graph[e.to].push  ({ node: e.from, weight: e.weight });
+        if (!graph[e.to]) graph[e.to] = [];
+        graph[e.from].push({ node: e.to, weight: e.weight });
+        graph[e.to].push({ node: e.from, weight: e.weight });
     });
 
     const dist = {}, prev = {}, visited = new Set();
@@ -546,10 +546,10 @@ function findNearestNode(lat, lng, targetType) {
 //  건물 간 경로 찾기
 function findPathBuilding(fromB, toB, edges, wheelchair) {
     let best = null;
-    
+
     // 1. DB에서 받은 입구 배열 확인
     let fromEntrances = fromB.entrances && fromB.entrances.length > 0 ? fromB.entrances : [];
-    let toEntrances   = toB.entrances && toB.entrances.length > 0 ? toB.entrances : [];
+    let toEntrances = toB.entrances && toB.entrances.length > 0 ? toB.entrances : [];
 
     // 2. DB에 입구 데이터가 없다면? -> 가장 가까운 'entrance(입구)' 노드를 자동으로 찾아서 연결!
     if (fromEntrances.length === 0) {
@@ -562,7 +562,7 @@ function findPathBuilding(fromB, toB, edges, wheelchair) {
         if (nearest) toEntrances.push(nearest.id);
         else toEntrances.push(toB.id);
     }
-    
+
     // 3. 다익스트라 경로 탐색
     for (const s of fromEntrances) {
         for (const e of toEntrances) {
@@ -572,7 +572,7 @@ function findPathBuilding(fromB, toB, edges, wheelchair) {
             }
         }
     }
-    
+
     return best;
 }
 
@@ -580,21 +580,21 @@ function runPathTest() {
     clearPathTest();
 
     const wheelchair = document.getElementById("wheelchairMode").checked;
-    const edges      = polylines.map(({ edge }) => edge);
-    const resultEl   = document.getElementById("pathResult");
-    let result       = null;
-    let labelFrom    = "", labelTo = "";
+    const edges = polylines.map(({ edge }) => edge);
+    const resultEl = document.getElementById("pathResult");
+    let result = null;
+    let labelFrom = "", labelTo = "";
 
     // 👉 여기가 중복되어 괄호 에러가 나고 있었습니다! 하나로 수정완료!
     if (pathTab === "building") {
         const fromId = document.getElementById("pathFromBuilding").value;
-        const toId   = document.getElementById("pathToBuilding").value;
+        const toId = document.getElementById("pathToBuilding").value;
         if (fromId === toId) { resultEl.textContent = "출발지와 도착지가 같습니다."; return; }
         const fromB = buildingList.find(b => b.id === fromId);
-        const toB   = buildingList.find(b => b.id === toId);
-        result   = findPathBuilding(fromB, toB, edges, wheelchair);
+        const toB = buildingList.find(b => b.id === toId);
+        result = findPathBuilding(fromB, toB, edges, wheelchair);
         labelFrom = fromB.name;
-        labelTo   = toB.name;
+        labelTo = toB.name;
     } else {
         // 노드 직접 선택
         if (!pathFromNodeId || !pathToNodeId) {
@@ -603,9 +603,9 @@ function runPathTest() {
         if (pathFromNodeId === pathToNodeId) {
             resultEl.textContent = "출발지와 도착지가 같습니다."; return;
         }
-        result   = dijkstra(pathFromNodeId, pathToNodeId, edges, wheelchair);
+        result = dijkstra(pathFromNodeId, pathToNodeId, edges, wheelchair);
         labelFrom = `#${pathFromNodeId} ${nodeMap[pathFromNodeId]?.name || ""}`;
-        labelTo   = `#${pathToNodeId} ${nodeMap[pathToNodeId]?.name || ""}`;
+        labelTo = `#${pathToNodeId} ${nodeMap[pathToNodeId]?.name || ""}`;
     }
 
     if (!result) {
@@ -641,8 +641,8 @@ function runPathTest() {
         if (!n) return;
         const li = document.createElement("li");
         li.textContent = `#${id} ${n.name}`;
-        if (i === 0)                    li.className = "start";
-        if (i === result.path.length-1) li.className = "end";
+        if (i === 0) li.className = "start";
+        if (i === result.path.length - 1) li.className = "end";
         listEl.appendChild(li);
     });
 
@@ -673,8 +673,8 @@ function applyPathDisplay() {
     let count = 0;
     markers.forEach(item => {
         let show = false;
-        if      (pathDisplay === "all")    show = activeNodeTypes.has(item.type);
-        else if (pathDisplay === "path")   show = pathSet.has(item.data.id);
+        if (pathDisplay === "all") show = activeNodeTypes.has(item.type);
+        else if (pathDisplay === "path") show = pathSet.has(item.data.id);
         else if (pathDisplay === "filter") show = activeNodeTypes.has(item.type) && pathSet.has(item.data.id);
         item.marker.setMap(show ? map : null);
         if (show) count++;
@@ -688,7 +688,7 @@ function applyPathDisplay() {
    ============================================= */
 function initSearch() {
     const searchInput = document.getElementById("searchInput");
-    const searchList  = document.getElementById("searchList");
+    const searchList = document.getElementById("searchList");
 
     function runSearch() {
         const query = searchInput.value.trim().toLowerCase();

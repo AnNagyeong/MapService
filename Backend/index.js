@@ -18,9 +18,49 @@ const dbConfig = {
 app.get('/api/poi', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
-        // 정규화된 'poi' 테이블에서 데이터를 가져온다.
-        const [rows] = await connection.execute('SELECT * FROM poi');
-        res.json(rows);
+
+        // 일반 노드
+        const [nodes] = await connection.execute(
+            `SELECT poi_id as id, poi_name as name, 
+            latitude as lat, longitude as lng,
+            poi_type as type
+            FROM poi WHERE poi_type != 'building'`
+        );
+
+        // lat, lng 숫자로 변환
+        const parsedNodes = nodes.map(n => ({
+            ...n,
+            lat: parseFloat(n.lat),
+            lng: parseFloat(n.lng)
+        })); //컬럼명 바꾸고 가져옴
+
+        // 건물 + 입구 목록
+        const [buildings] = await connection.execute(
+            `SELECT p.poi_id as id, p.poi_name as name, 
+            p.latitude as lat, p.longitude as lng, p.poi_type as type,
+            be.entrance_poi_id
+            FROM poi p
+            JOIN building_entrance be 
+            ON p.poi_id COLLATE utf8mb4_unicode_ci = be.building_poi_id
+            WHERE p.poi_type = 'building'`
+        );
+        console.log(buildings[0]);
+        // building별로 entrances 배열로 묶기
+        const buildingMap = {};
+        buildings.forEach(row => {
+            if (!buildingMap[row.id]) {
+                buildingMap[row.id] = {
+                    id: row.id, name: row.name,
+                    lat: parseFloat(row.lat),
+                    lng: parseFloat(row.lng),
+                    type: row.type, entrances: []
+                };
+            }
+            buildingMap[row.id].entrances.push(row.entrance_poi_id);
+        });
+
+        const result = [...parsedNodes, ...Object.values(buildingMap)];
+        res.json(result);
         await connection.end();
     } catch (err) {
         res.status(500).json({ error: err.message });
@@ -31,8 +71,11 @@ app.get('/api/poi', async (req, res) => {
 app.get('/api/edge', async (req, res) => {
     try {
         const connection = await mysql.createConnection(dbConfig);
-        // 'path_connection' 테이블에서 데이터를 가져온다.
-        const [rows] = await connection.execute('SELECT * FROM path_connection');
+        const [rows] = await connection.execute(
+            `SELECT start_poi_id as \`from\`, end_poi_id as \`to\`,
+                    distance as weight, type
+            FROM path_connection`
+        );
         res.json(rows);
         await connection.end();
     } catch (err) {
