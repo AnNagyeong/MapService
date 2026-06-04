@@ -87,6 +87,7 @@ Promise.all([
                 type: row.type,
                 lat: row.lat,
                 lng: row.lng,
+                panorama_url: row.panorama_url,
                 entrances: parsedEntrances
             };
         });
@@ -123,7 +124,7 @@ function initNodes(poi) {
 
         kakao.maps.event.addListener(marker, "mouseover", () => {
             infowindow.setContent(
-                `<div style="padding:5px;font-size:12px;">ID: ${p.id}<br>${p.name}</div>`);
+                `<div style="padding:5px;font-size:12px;">${p.name}</div>`);
             infowindow.open(map, marker);
         });
         kakao.maps.event.addListener(marker, "mouseout", () => infowindow.close());
@@ -184,6 +185,17 @@ function syncAllCheck(allId, selector) {
     document.getElementById(allId).checked = [...allCbs].every(cb => cb.checked);
 }
 
+function updatePanoBtn(id) {
+    const p = nodeMap[id];
+    if (!p) return;
+    const btn = document.getElementById("panoBtnWrap");
+    if (!btn) return;
+    btn.style.display = "";
+    btn.querySelector("button").onclick = () => openPanoViewer(p);
+    btn.querySelector("button").textContent =
+        p.panorama_url ? "🔭 360° 사진 보기" : "🔭 360° 뷰어 열기";
+}
+
 function selectNode(id) {
     selectedNodeId = id;
     nodeFilterActive = true;
@@ -204,6 +216,8 @@ function selectNode(id) {
     });
     document.getElementById("connectedEdgeCount").innerText = connected.length;
     applyEdgeFilter();
+    updatePanoBtn(id);
+
 }
 
 function clearSelection() {
@@ -652,6 +666,7 @@ function runPathTest() {
     map.setBounds(bounds, 40);
 
     applyPathDisplay();
+    initPathStepViewer();
 }
 
 function clearPathTest() {
@@ -660,6 +675,7 @@ function clearPathTest() {
     document.getElementById("pathResult").textContent = "경로를 선택하세요.";
     document.getElementById("pathNodeList").innerHTML = "";
     updateNodeMarkers();
+    clearPathStepViewer();
 }
 
 function onPathDisplayChange() {
@@ -696,7 +712,7 @@ function initSearch() {
         if (!query) { searchList.style.display = "none"; return; }
 
         const results = allPoi.filter(p =>
-            String(p.id).includes(query) || p.name.toLowerCase().includes(query));
+            p.name.toLowerCase().includes(query));
 
         if (results.length === 0) {
             searchList.innerHTML = "<li style='padding:8px;color:#999;'>검색 결과 없음</li>";
@@ -705,7 +721,7 @@ function initSearch() {
 
         results.forEach(p => {
             const li = document.createElement("li");
-            li.innerHTML = `<span style="color:#999;font-size:11px;margin-right:4px;">#${p.id}</span>${p.name}`;
+            li.innerHTML = p.name;
             li.addEventListener("click", () => {
                 searchInfowindow.close();
                 const target = markers.find(m => m.data.id === p.id);
@@ -727,4 +743,342 @@ function initSearch() {
     document.addEventListener("click", e => {
         if (!e.target.closest("#searchWrapper")) searchList.style.display = "none";
     });
+}
+
+/* =============================================
+   파노라마
+   ============================================= */
+
+// 파노라마 뷰어 상태
+let panoRenderer = null;
+let panoScene = null;
+let panoCamera = null;
+let panoAnimId = null;
+let panoDragging = false;
+let panoLon = 0, panoLat = 0;
+let panoStartX = 0, panoStartY = 0;
+let panoStartLon = 0, panoStartLat = 0;
+
+// 방향 컷 상태
+let dirCutCanvas = null;
+let dirCutCtx = null;
+let dirCutImg = null;
+let dirCutUrl = null;
+
+/* --------------------------------------------------
+   1. 방향각 계산 (두 노드 사이 bearing, 0~360°)
+-------------------------------------------------- */
+function getBearing(lat1, lng1, lat2, lng2) {
+    const toRad = d => d * Math.PI / 180;
+    const dLng = toRad(lng2 - lng1);
+    const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2))
+        - Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+/* --------------------------------------------------
+   2. equirectangular 이미지에서 방향 컷 추출
+   bearing: 0~360° (북=0, 동=90, 남=180, 서=270)
+   fovH: 수평 시야각 (기본 90°)
+   ratio: 출력 비율 (4:3)
+-------------------------------------------------- */
+function extractDirectionCut(img, bearing, fovH = 90) {
+    const srcW = img.naturalWidth;
+    const srcH = img.naturalHeight;
+
+    // 4:3 비율로 출력 크기 결정
+    const outW = Math.min(srcW * (fovH / 360), srcW);
+    const outH = outW * (3 / 4);
+
+    // 출력 canvas
+    const out = document.createElement("canvas");
+    out.width = outW;
+    out.height = outH;
+    const outCtx = out.getContext("2d");
+
+    // bearing → x 오프셋 (equirectangular: x = bearing/360 * width)
+    const centerX = (bearing / 360) * srcW;
+    const halfW = outW / 2;
+
+    // 수직 중앙 (지평선 기준 약간 위)
+    const centerY = srcH * 0.45;
+    const halfH = outH / 2;
+
+    const srcX = centerX - halfW;
+    const srcY = centerY - halfH;
+
+    if (srcX >= 0 && srcX + outW <= srcW) {
+        // 이음새 없는 경우
+        outCtx.drawImage(img, srcX, srcY, outW, outH, 0, 0, outW, outH);
+    } else {
+        // 이음새 걸치는 경우 (0°/360° 경계)
+        const leftW = srcW - ((srcX + srcW) % srcW);
+        const rightW = outW - leftW;
+        outCtx.drawImage(img, (srcX + srcW) % srcW, srcY, leftW, outH, 0, 0, leftW, outH);
+        outCtx.drawImage(img, 0, srcY, rightW, outH, leftW, 0, rightW, outH);
+    }
+
+    return out.toDataURL("image/jpeg", 0.92);
+}
+
+/* --------------------------------------------------
+   3. 길찾기 경로 스텝별 방향 컷 표시
+   pathNodeIds: 경로 노드 ID 배열 (graphManager2.js 전역)
+   stepIndex: 현재 보여줄 스텝 (0 = 첫 노드)
+-------------------------------------------------- */
+let currentPathStep = 0;
+
+function showPathStep(stepIndex) {
+    if (!pathNodeIds || pathNodeIds.length < 2) return;
+    stepIndex = Math.max(0, Math.min(stepIndex, pathNodeIds.length - 2));
+    currentPathStep = stepIndex;
+
+    const fromNode = nodeMap[pathNodeIds[stepIndex]];
+    const toNode = nodeMap[pathNodeIds[stepIndex + 1]];
+    if (!fromNode || !toNode) return;
+
+    // 스텝 UI 업데이트
+    document.getElementById("pathStepLabel").textContent =
+        `${stepIndex + 1} / ${pathNodeIds.length - 1} 스텝`;
+    document.getElementById("pathStepFrom").textContent =
+        `📍 #${fromNode.id} ${fromNode.name}`;
+    document.getElementById("pathStepTo").textContent =
+        `→ #${toNode.id} ${toNode.name}`;
+
+    const bearing = getBearing(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng);
+
+    const dirImg = document.getElementById("dirCutImg");
+    const dirNotice = document.getElementById("dirCutNotice");
+    const panoBtn = document.getElementById("pathPanoBtn");
+
+    // 파노 버튼: fromNode에 사진 있으면 활성화
+    if (fromNode.panorama_url) {
+        panoBtn.style.display = "";
+        panoBtn.onclick = () => openPanoViewerWithBearing(fromNode, bearing);
+    } else {
+        panoBtn.style.display = "none";
+    }
+
+    if (!fromNode.panorama_url) {
+        dirImg.style.display = "none";
+        dirNotice.style.display = "";
+        dirNotice.textContent = "📷 이 노드에는 사진이 없습니다.";
+        return;
+    }
+
+    dirNotice.style.display = "";
+    dirNotice.textContent = "⏳ 사진 불러오는 중...";
+    dirImg.src = "";
+
+    // 이미지 로드 (같은 URL이면 캐시 재사용)
+    function renderCut(img) {
+        const dataUrl = extractDirectionCut(img, bearing);
+        dirImg.src = dataUrl;
+        dirNotice.style.display = "none";
+
+        // 방향 화살표 오버레이 업데이트
+        document.getElementById("dirArrow").textContent = bearingToArrow(bearing);
+        document.getElementById("dirDegree").textContent =
+            `${Math.round(bearing)}° ${bearingToLabel(bearing)}`;
+    }
+
+    if (dirCutUrl === fromNode.panorama_url && dirCutImg) {
+        renderCut(dirCutImg);
+    } else {
+        dirCutImg = new Image();
+        dirCutImg.crossOrigin = "anonymous";
+        dirCutImg.onload = () => { dirCutUrl = fromNode.panorama_url; renderCut(dirCutImg); };
+        dirCutImg.onerror = () => {
+            dirNotice.textContent = "⚠ 이미지를 불러올 수 없습니다.";
+        };
+        dirCutImg.src = 'http://localhost:3000' + fromNode.panorama_url;
+    }
+}
+
+function bearingToArrow(b) {
+    const arrows = ["↑", "↗", "→", "↘", "↓", "↙", "←", "↖", "↑"];
+    return arrows[Math.round(b / 45) % 8];
+}
+function bearingToLabel(b) {
+    const labels = ["북", "북동", "동", "남동", "남", "남서", "서", "북서", "북"];
+    return labels[Math.round(b / 45) % 8];
+}
+
+function prevPathStep() { showPathStep(currentPathStep - 1); }
+function nextPathStep() { showPathStep(currentPathStep + 1); }
+
+/* --------------------------------------------------
+   4. 파노라마 뷰어 (bearing 초기 시점 포함)
+-------------------------------------------------- */
+function initPanoViewer() {
+    const canvas = document.getElementById("panoCanvas");
+    if (!canvas || panoRenderer) return;
+
+    panoRenderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    panoScene = new THREE.Scene();
+    panoCamera = new THREE.PerspectiveCamera(75, canvas.clientWidth / canvas.clientHeight, 0.1, 1000);
+    panoCamera.position.set(0, 0, 0.01);
+
+    const geo = new THREE.SphereGeometry(500, 60, 40);
+    geo.scale(-1, 1, 1);
+    const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0x111111 }));
+    mesh.name = "panosphere";
+    panoScene.add(mesh);
+
+    resizePanoRenderer();
+
+    canvas.addEventListener("mousedown", onPanoPointerDown);
+    canvas.addEventListener("mousemove", onPanoPointerMove);
+    canvas.addEventListener("mouseup", onPanoPointerUp);
+    canvas.addEventListener("mouseleave", onPanoPointerUp);
+    canvas.addEventListener("touchstart", onPanoTouchStart, { passive: true });
+    canvas.addEventListener("touchmove", onPanoTouchMove, { passive: false });
+    canvas.addEventListener("touchend", onPanoPointerUp);
+    canvas.addEventListener("wheel", (e) => {
+        e.preventDefault();
+        panoCamera.fov = Math.min(110, Math.max(30, panoCamera.fov + e.deltaY * 0.05));
+        panoCamera.updateProjectionMatrix();
+    }, { passive: false });
+}
+
+function resizePanoRenderer() {
+    const canvas = document.getElementById("panoCanvas");
+    if (!canvas || !panoRenderer) return;
+    const w = canvas.clientWidth, h = canvas.clientHeight;
+    panoRenderer.setSize(w, h, false);
+    if (panoCamera) { panoCamera.aspect = w / h; panoCamera.updateProjectionMatrix(); }
+}
+
+// 노드 단독 뷰어 (기존)
+function openPanoViewer(node) {
+    openPanoViewerWithBearing(node, 0);
+}
+
+// bearing 초기 시점 지정 뷰어
+function openPanoViewerWithBearing(node, bearing) {
+    console.log('panorama_url:', node.panorama_url);
+    const overlay = document.getElementById("panoOverlay");
+    document.getElementById("panoTitle").textContent = `#${node.id} ${node.name}`;
+    overlay.style.display = "flex";
+
+    if (!panoRenderer) initPanoViewer();
+    resizePanoRenderer();
+
+    // bearing을 lon으로 변환 (equirectangular: 북=0 → lon=0이 동쪽이므로 -90 보정)
+    panoLon = bearing - 90;
+    panoLat = 0;
+    panoCamera.fov = 75;
+    panoCamera.updateProjectionMatrix();
+
+    const mesh = panoScene.getObjectByName("panosphere");
+    const notice = document.getElementById("panoNotice");
+
+    if (node.panorama_url) {
+        notice.style.display = "none";
+        mesh.material = new THREE.MeshBasicMaterial({ color: 0x222222 });
+        const loader = new THREE.TextureLoader();
+        loader.load(
+            'http://localhost:3000' + node.panorama_url,
+            (tex) => {
+                mesh.material = new THREE.MeshBasicMaterial({ map: tex });
+            },
+            undefined,
+            () => { notice.textContent = '⚠ 이미지를 불러올 수 없습니다.'; notice.style.display = 'block'; }
+        );
+    } else {
+        mesh.material = new THREE.MeshBasicMaterial({ color: 0x1a1a2e, wireframe: true });
+        notice.textContent = "📷 이 노드에는 아직 파노라마 사진이 없습니다.";
+        notice.style.display = "block";
+    }
+
+    if (panoAnimId) cancelAnimationFrame(panoAnimId);
+    renderPano();
+}
+
+function closePanoViewer() {
+    document.getElementById("panoOverlay").style.display = "none";
+    if (panoAnimId) { cancelAnimationFrame(panoAnimId); panoAnimId = null; }
+}
+
+function renderPano() {
+    panoAnimId = requestAnimationFrame(renderPano);
+    panoLat = Math.max(-85, Math.min(85, panoLat));
+    const phi = THREE.MathUtils.degToRad(90 - panoLat);
+    const theta = THREE.MathUtils.degToRad(panoLon);
+    panoCamera.lookAt(
+        500 * Math.sin(phi) * Math.cos(theta),
+        500 * Math.cos(phi),
+        500 * Math.sin(phi) * Math.sin(theta)
+    );
+    panoRenderer.render(panoScene, panoCamera);
+}
+
+function onPanoPointerDown(e) {
+    panoDragging = true;
+    panoStartX = e.clientX; panoStartY = e.clientY;
+    panoStartLon = panoLon; panoStartLat = panoLat;
+}
+function onPanoPointerMove(e) {
+    if (!panoDragging) return;
+    panoLon = panoStartLon - (e.clientX - panoStartX) * 0.2;
+    panoLat = panoStartLat + (e.clientY - panoStartY) * 0.2;
+}
+function onPanoPointerUp() { panoDragging = false; }
+function onPanoTouchStart(e) {
+    if (e.touches.length !== 1) return;
+    panoDragging = true;
+    panoStartX = e.touches[0].clientX; panoStartY = e.touches[0].clientY;
+    panoStartLon = panoLon; panoStartLat = panoLat;
+}
+function onPanoTouchMove(e) {
+    if (!panoDragging || e.touches.length !== 1) return;
+    e.preventDefault();
+    panoLon = panoStartLon - (e.touches[0].clientX - panoStartX) * 0.2;
+    panoLat = panoStartLat + (e.touches[0].clientY - panoStartY) * 0.2;
+}
+
+/* --------------------------------------------------
+   5. 노드 선택 시 파노 버튼 (기존 기능 유지)
+-------------------------------------------------- */
+function updatePanoBtn(id) {
+    const p = nodeMap[id];
+    const btn = document.getElementById("panoBtnWrap");
+    if (!p || !btn) return;
+    btn.style.display = "";
+    btn.querySelector("button").onclick = () => openPanoViewer(p);
+    btn.querySelector("button").textContent =
+        p.panorama_url ? "🔭 360° 사진 보기" : "🔭 360° 뷰어 열기";
+}
+
+/* --------------------------------------------------
+   6. 경로 찾기 완료 후 스텝 뷰어 초기화
+   graphManager2.js의 runPathTest() 안에서
+   경로 표시 완료 후 아래를 호출하세요:
+     initPathStepViewer();
+-------------------------------------------------- */
+function initPathStepViewer() {
+    if (!pathNodeIds || pathNodeIds.length < 2) return;
+    document.getElementById("dirPanel").style.display = "";
+    currentPathStep = 0;
+    showPathStep(0);
+}
+
+function clearPathStepViewer() {
+    document.getElementById("dirPanel").style.display = "none";
+    dirCutImg = null;
+    dirCutUrl = null;
+}
+
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closePanoViewer(); });
+window.addEventListener("resize", resizePanoRenderer);
+
+/*--------------------------------------------------
+    파노라마 창 최소화, 닫기
+-------------------------------------------------- */
+let dirPanelMinimized = false;
+
+
+function closeDirPanel() {
+    document.getElementById('dirPanel').style.display = 'none';
 }

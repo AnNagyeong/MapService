@@ -299,3 +299,339 @@ select {
 .node-autocomplete li:hover {
     background: #f5f5f5;
 }
+
+/*파노라마*/
+#panoCanvas {
+    cursor: grab;
+}
+
+#panoCanvas:active {
+    cursor: grabbing;
+}
+
+#dirCutImg {
+    aspect-ratio: 4/3;
+    object-fit: cover;
+}
+
+#dirPanel {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    min-width: 280px;
+    min-height: 200px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+    z-index: 500;
+    overflow: hidden;
+    user-select: none;
+    /* 리사이즈 핸들 */
+    resize: both;
+}
+
+/* 드래그 핸들 */
+#dirPanelHandle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: #1a1a2e;
+    color: #e0e0ff;
+    cursor: grab;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+#dirPanelHandle:active {
+    cursor: grabbing;
+}
+
+#dirPanelHandle button {
+    background: none;
+    border: 1px solid #555;
+    color: #e0e0ff;
+    padding: 1px 7px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+#dirPanelHandle button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 패널 본문 */
+#dirPanelBody {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 37px);
+    /* 핸들 높이 제외 */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* 스텝 네비게이션 */
+#dirStepNav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+#pathStepLabel {
+    font-size: 12px;
+    color: #555;
+}
+
+/* 노드 정보 */
+#pathStepFrom {
+    font-size: 11px;
+    color: #2563eb;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+#pathStepTo {
+    font-size: 11px;
+    color: #16a34a;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+/* 이미지 영역 — 남은 공간 모두 차지 */
+#dirImgWrap {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    background: #111;
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 150px;
+}
+
+#dirCutImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* none 제거 — JS에서 src로 제어 */
+}
+
+#dirOverlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#dirArrow {
+    font-size: 18px;
+}
+
+#dirCutNotice {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #aaa;
+    padding: 10px;
+    text-align: center;
+    background: #111;
+}
+
+/* 360° 버튼 */
+#pathPanoBtn {
+    display: none;
+    width: 100%;
+    margin-top: 8px;
+    background: #1a1a2e;
+    color: #e0e0ff;
+    border: none;
+    padding: 7px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+#pathPanoBtn:hover {
+    background: #2d2d5e;
+}
+
+.admin-tab-btn.active {
+    color: #1e40af;
+    border-bottom: 2px solid #1e40af;
+    background: #eff6ff;
+}
+
+.admin-tab-btn:hover {
+    background: #f1f5f9;
+}
+
+/* 공통 인풋 */
+.ainput {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color .15s;
+}
+
+.ainput:focus {
+    border-color: #2563eb;
+}
+
+/* 레이블 */
+.alabel {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* 버튼 */
+.abtn-primary {
+    width: 100%;
+    padding: 9px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.abtn-primary:hover {
+    background: #1d4ed8;
+}
+
+.abtn-secondary {
+    width: 100%;
+    padding: 9px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.abtn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.abtn-danger {
+    width: 100%;
+    padding: 9px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.abtn-danger:hover {
+    background: #dc2626;
+}
+
+/* 구분선 */
+.adivider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 12px 0;
+}
+
+/* 자동완성 목록 */
+.autocomplete-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+    z-index: 3000;
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 4px 0;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.autocomplete-list li {
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.autocomplete-list li:hover {
+    background: #eff6ff;
+}
+
+/* 토스트 */
+.admin-toast.success {
+    background: #16a34a;
+    color: #fff;
+}
+
+.admin-toast.error {
+    background: #dc2626;
+    color: #fff;
+}
+
+/* 지도 클릭 모드 버튼 */
+#mapClickBtn.active {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+/* details 스타일 */
+details>summary {
+    user-select: none;
+}
+
+details>summary::-webkit-details-marker {
+    color: #94a3b8;
+}

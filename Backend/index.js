@@ -20,18 +20,18 @@ if (!fs.existsSync(panoramasDir)) fs.mkdirSync(panoramasDir, { recursive: true }
 const storage = multer.diskStorage({
     destination: (req, file, cb) => cb(null, panoramasDir),
     filename: (req, file, cb) => {
-        const ext = path.extname(file.originalname);
-        cb(null, `node_${req.params.id}${ext}`);
-    }
+    const ext = path.extname(file.originalname);
+    cb(null, `node_${req.params.id}${ext}`);
+}
 });
 const upload = multer({
     storage,
-    limits: { fileSize: 50 * 1024 * 1024 }, // 50MB
+    limits: { fileSize: 50 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         if (file.mimetype.startsWith('image/')) cb(null, true);
         else cb(new Error('이미지 파일만 업로드할 수 있습니다.'));
     }
-});
+});;
 
 const dbConfig = {
     host: process.env.DB_HOST,
