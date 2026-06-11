@@ -13,13 +13,13 @@ const isolatedSize = new kakao.maps.Size(38, 38);
 const isolatedImage = new kakao.maps.MarkerImage("../images/redMarker.png", isolatedSize);
 
 const markerImages = {
-    entrance: new kakao.maps.MarkerImage("../images/blueMarker.png", imageSize),
-    ramp: new kakao.maps.MarkerImage("../images/greenMarker.png", imageSize),
-    stair: new kakao.maps.MarkerImage("../images/redMarker.png", imageSize),
-    elevator: new kakao.maps.MarkerImage("../images/orangeMarker.png", imageSize),
-    crosswalk: new kakao.maps.MarkerImage("../images/pinkMarker.png", imageSize),
-    path: new kakao.maps.MarkerImage("../images/greyMarker.png", imageSize),
-    building: new kakao.maps.MarkerImage("../images/yellowMarker.png", imageSize)
+    entrance: new kakao.maps.MarkerImage("/images/blueMarker.png", imageSize),
+    ramp: new kakao.maps.MarkerImage("/images/greenMarker.png", imageSize),
+    stair: new kakao.maps.MarkerImage("/images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("/images/orangeMarker.png", imageSize),
+    crosswalk: new kakao.maps.MarkerImage("/images/pinkMarker.png", imageSize),
+    path: new kakao.maps.MarkerImage("/images/greyMarker.png", imageSize),
+    building: new kakao.maps.MarkerImage("/images/yellowMarker.png", imageSize)
 };
 
 const NODE_COLORS = {
@@ -205,6 +205,13 @@ function selectNode(id) {
 
     document.getElementById("selectedNodeInfo").innerText = p.name;  // ID 제거
     document.getElementById("nodeIdInput").value = id;
+
+    const photoInput = document.getElementById('photoPoiId');
+    if (photoInput) {
+        photoInput.value = id;
+        const preview = document.getElementById('photoPreview');
+        if (preview) preview.style.display = 'none';
+    }
 
     const connected = polylines.filter(({ edge: e }) => e.from === id || e.to === id);
     const listEl = document.getElementById("connectedEdgeList");
