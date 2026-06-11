@@ -96,14 +96,21 @@
             <div id="modeBuilding">
                 <div class="path-row">
                     <label>출발</label>
-                    <select id="pathFromBuilding"></select>
+                    <select id="pathFromBuilding" onchange="onBuildingSelectChange('from')"></select>
+                </div>
+                <div id="pathFromEntranceRow" class="path-row" style="display:none;">
+                    <label style="font-size:11px;color:#888;">↳ 입구</label>
+                    <select id="pathFromEntrance" style="font-size:11px;"></select>
                 </div>
                 <div class="path-row">
                     <label>도착</label>
-                    <select id="pathToBuilding"></select>
+                    <select id="pathToBuilding" onchange="onBuildingSelectChange('to')"></select>
+                </div>
+                <div id="pathToEntranceRow" class="path-row" style="display:none;">
+                    <label style="font-size:11px;color:#888;">↳ 입구</label>
+                    <select id="pathToEntrance" style="font-size:11px;"></select>
                 </div>
             </div>
-
             <!-- 노드 직접 선택 모드 -->
             <div id="modeNode" style="display:none;">
                 <div class="path-row">
@@ -157,7 +164,7 @@
         <div id="dirPanelHandle">
             <span id="dirPanelTitle">📷 경로 뷰어</span>
             <div style="display:flex;gap:6px;align-items:center;">
-                
+
                 <button onclick="closeDirPanel()" title="닫기">✕</button>
             </div>
         </div>
@@ -200,8 +207,7 @@
             padding:8px 18px; border-radius:20px; pointer-events:none;"></div>
     </div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script type="text/javascript"
-        src="//dapi.kakao.com/v2/maps/sdk.js?appkey=API 키 입력"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=API 키 입력"></script>
     <script src="graphManager2.js"></script>
     <script src="adminPanel.js"></script>
     <!-- 관리자 버튼 -->
