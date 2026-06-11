@@ -1,8 +1,3 @@
-/* =============================================
-   관리자 CRUD 패널 (adminPanel.js)
-   graphManager2.js 이후에 로드하세요.
-   ============================================= */
-
 const API = 'http://localhost:3000';
 
 const POI_TYPES = ['entrance', 'ramp', 'stair', 'elevator', 'crosswalk', 'path', 'building'];
