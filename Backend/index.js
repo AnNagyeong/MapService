@@ -11,6 +11,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 app.use('/panoramas', express.static(path.join(__dirname, '../Test/panoramas')));
+app.use('/images', express.static(path.join(__dirname, '../Test/images')));
 
 // panoramas 폴더가 없으면 자동 생성
 const panoramasDir = path.join(__dirname, '../Test/panoramas');
@@ -339,6 +340,14 @@ app.delete('/api/building-entrance', async (req, res) => {
 app.use((err, req, res, next) => {
     if (err.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: '파일 크기는 50MB 이하여야 합니다.' });
     res.status(500).json({ error: err.message });
+});
+
+app.use(express.static(path.join(__dirname, '../Test/graphManager2')));
+
+app.get('/admin', (req, res) => {
+    let html = fs.readFileSync(path.join(__dirname, '../Test/graphManager2/graphManager2.html'), 'utf-8');
+    html = html.replace('__KAKAO_KEY__', process.env.KAKAO_MAP_KEY);
+    res.send(html);
 });
 
 app.listen(3000, () => console.log('백엔드가 3000번 포트에서 실행 중입니다!'));

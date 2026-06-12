@@ -13,13 +13,13 @@ const isolatedSize = new kakao.maps.Size(38, 38);
 const isolatedImage = new kakao.maps.MarkerImage("../images/redMarker.png", isolatedSize);
 
 const markerImages = {
-    entrance: new kakao.maps.MarkerImage("../images/blueMarker.png", imageSize),
-    ramp: new kakao.maps.MarkerImage("../images/greenMarker.png", imageSize),
-    stair: new kakao.maps.MarkerImage("../images/redMarker.png", imageSize),
-    elevator: new kakao.maps.MarkerImage("../images/orangeMarker.png", imageSize),
-    crosswalk: new kakao.maps.MarkerImage("../images/pinkMarker.png", imageSize),
-    path: new kakao.maps.MarkerImage("../images/greyMarker.png", imageSize),
-    building: new kakao.maps.MarkerImage("../images/yellowMarker.png", imageSize)
+    entrance: new kakao.maps.MarkerImage("/images/blueMarker.png", imageSize),
+    ramp: new kakao.maps.MarkerImage("/images/greenMarker.png", imageSize),
+    stair: new kakao.maps.MarkerImage("/images/redMarker.png", imageSize),
+    elevator: new kakao.maps.MarkerImage("/images/orangeMarker.png", imageSize),
+    crosswalk: new kakao.maps.MarkerImage("/images/pinkMarker.png", imageSize),
+    path: new kakao.maps.MarkerImage("/images/greyMarker.png", imageSize),
+    building: new kakao.maps.MarkerImage("/images/yellowMarker.png", imageSize)
 };
 
 const NODE_COLORS = {
@@ -203,21 +203,29 @@ function selectNode(id) {
     const p = nodeMap[id];
     if (!p) return;
 
-    document.getElementById("selectedNodeInfo").innerText = `#${id} ${p.name}`;
+    document.getElementById("selectedNodeInfo").innerText = p.name;  // ID 제거
     document.getElementById("nodeIdInput").value = id;
+
+    const photoInput = document.getElementById('photoPoiId');
+    if (photoInput) {
+        photoInput.value = id;
+        const preview = document.getElementById('photoPreview');
+        if (preview) preview.style.display = 'none';
+    }
 
     const connected = polylines.filter(({ edge: e }) => e.from === id || e.to === id);
     const listEl = document.getElementById("connectedEdgeList");
     listEl.innerHTML = "";
     connected.forEach(({ edge: e }) => {
         const li = document.createElement("li");
-        li.textContent = `#${e.from}↔#${e.to}  ${e.type}  ${e.weight}m`;
+        const fromName = nodeMap[e.from]?.name || e.from;
+        const toName   = nodeMap[e.to]?.name   || e.to;
+        li.textContent = `${fromName} ↔ ${toName}  |  ${e.type}  ${e.weight.toFixed(2)}m`;
         listEl.appendChild(li);
     });
     document.getElementById("connectedEdgeCount").innerText = connected.length;
     applyEdgeFilter();
     updatePanoBtn(id);
-
 }
 
 function clearSelection() {
@@ -438,11 +446,63 @@ function checkDuplicates() {
 function initPathSelects() {
     const selFrom = document.getElementById("pathFromBuilding");
     const selTo = document.getElementById("pathToBuilding");
+
+    // 빈 기본 옵션
+    selFrom.innerHTML = `<option value="">건물 선택</option>`;
+    selTo.innerHTML = `<option value="">건물 선택</option>`;
+
     buildingList.forEach(b => {
         selFrom.innerHTML += `<option value="${b.id}">${b.name}</option>`;
         selTo.innerHTML += `<option value="${b.id}">${b.name}</option>`;
     });
-    if (selTo.options.length > 1) selTo.selectedIndex = 1;
+}
+
+function onBuildingSelectChange(side) {
+    const buildingSelId = side === "from" ? "pathFromBuilding" : "pathToBuilding";
+    const entranceRowId = side === "from" ? "pathFromEntranceRow" : "pathToEntranceRow";
+    const entranceSelId = side === "from" ? "pathFromEntrance" : "pathToEntrance";
+
+    const buildingId = document.getElementById(buildingSelId).value;
+    const entranceRow = document.getElementById(entranceRowId);
+    const entranceSel = document.getElementById(entranceSelId);
+
+    entranceSel.innerHTML = "";
+
+    if (!buildingId) {
+        entranceRow.style.display = "none";
+        return;
+    }
+
+    const building = buildingList.find(b => b.id === buildingId);
+    if (!building) { entranceRow.style.display = "none"; return; }
+
+    // DB에 등록된 입구 목록
+    let entranceIds = building.entrances && building.entrances.length > 0
+        ? building.entrances
+        : [];
+
+    // 등록된 입구가 없으면 가장 가까운 entrance 노드 1개를 자동으로
+    if (entranceIds.length === 0) {
+        const nearest = findNearestNode(building.lat, building.lng, "entrance");
+        if (nearest) entranceIds = [nearest.id];
+    }
+
+    if (entranceIds.length === 0) {
+        // 입구가 전혀 없으면 드롭다운 숨기고 건물 자체 사용
+        entranceRow.style.display = "none";
+        return;
+    }
+
+    // "자동 선택" 옵션 (기존 findPathBuilding 로직과 동일하게 최단 경로)
+    entranceSel.innerHTML = `<option value="auto">자동 선택 (최단)</option>`;
+
+    entranceIds.forEach(eid => {
+        const node = nodeMap[eid];
+        if (!node) return;
+        entranceSel.innerHTML += `<option value="${eid}"> ${node.name}</option>`;
+    });
+
+    entranceRow.style.display = "";
 }
 
 // 탭 전환
@@ -599,14 +659,42 @@ function runPathTest() {
     let result = null;
     let labelFrom = "", labelTo = "";
 
-    // 👉 여기가 중복되어 괄호 에러가 나고 있었습니다! 하나로 수정완료!
     if (pathTab === "building") {
         const fromId = document.getElementById("pathFromBuilding").value;
         const toId = document.getElementById("pathToBuilding").value;
+        if (!fromId || !toId) { resultEl.textContent = "출발지와 도착지를 모두 선택하세요."; return; }
         if (fromId === toId) { resultEl.textContent = "출발지와 도착지가 같습니다."; return; }
+
         const fromB = buildingList.find(b => b.id === fromId);
         const toB = buildingList.find(b => b.id === toId);
-        result = findPathBuilding(fromB, toB, edges, wheelchair);
+
+        // 입구 드롭다운 선택값 읽기
+        const fromEntranceSel = document.getElementById("pathFromEntrance");
+        const toEntranceSel = document.getElementById("pathToEntrance");
+        const fromEntranceVal = fromEntranceSel ? fromEntranceSel.value : "auto";
+        const toEntranceVal = toEntranceSel ? toEntranceSel.value : "auto";
+
+        if (fromEntranceVal !== "auto" || toEntranceVal !== "auto") {
+            // 하나라도 수동 지정 시 — 고정 출발/도착 입구로 다익스트라
+            let fromEntrances = fromEntranceVal === "auto"
+                ? (fromB.entrances?.length ? fromB.entrances : (() => { const n = findNearestNode(fromB.lat, fromB.lng, "entrance"); return n ? [n.id] : [fromB.id]; })())
+                : [fromEntranceVal];
+            let toEntrances = toEntranceVal === "auto"
+                ? (toB.entrances?.length ? toB.entrances : (() => { const n = findNearestNode(toB.lat, toB.lng, "entrance"); return n ? [n.id] : [toB.id]; })())
+                : [toEntranceVal];
+
+            let best = null;
+            for (const s of fromEntrances) {
+                for (const e of toEntrances) {
+                    const r = dijkstra(s, e, edges, wheelchair);
+                    if (r && (!best || r.distance < best.distance)) best = { ...r, fromEntrance: s, toEntrance: e };
+                }
+            }
+            result = best;
+        } else {
+            result = findPathBuilding(fromB, toB, edges, wheelchair);
+        }
+
         labelFrom = fromB.name;
         labelTo = toB.name;
     } else {
