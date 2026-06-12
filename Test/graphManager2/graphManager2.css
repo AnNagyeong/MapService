@@ -1,0 +1,637 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html,
+body {
+    height: 100%;
+}
+
+body {
+    display: flex;
+    height: 100vh;
+    font-family: sans-serif;
+    font-size: 13px;
+    overflow: hidden;
+}
+
+#map {
+    flex: 1;
+    position: relative;
+    height: 100%;
+}
+
+#controlBox {
+    width: 270px;
+    min-width: 270px;
+    border-left: 1px solid #ccc;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.section {
+    padding: 8px 12px;
+    border-bottom: 1px solid #ddd;
+}
+
+.section-title {
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+
+.box-title {
+    padding: 6px 12px;
+    background: #f0f0f0;
+    font-weight: bold;
+    border-bottom: 1px solid #ccc;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+button {
+    padding: 4px 8px;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    background: #fff;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+button:hover {
+    background: #eee;
+}
+
+button.success {
+    background: #060;
+    color: #fff;
+    border-color: #060;
+}
+
+.btn-row {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+input[type="text"],
+input[type="number"],
+select {
+    padding: 4px 7px;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    font-size: 12px;
+}
+
+#searchWrapper {
+    position: relative;
+}
+
+#searchInput {
+    width: 100%;
+}
+
+#searchList {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 150px;
+    overflow-y: auto;
+    z-index: 100;
+    list-style: none;
+}
+
+#searchList li {
+    padding: 5px 10px;
+    cursor: pointer;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+#searchList li:hover {
+    background: #f5f5f5;
+}
+
+#selectedNodeInfo {
+    font-size: 12px;
+    color: #555;
+    margin-bottom: 5px;
+}
+
+#nodeIdRow {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+#nodeIdInput {
+    width: 80px;
+}
+
+#connectedEdgeList {
+    list-style: none;
+    max-height: 100px;
+    overflow-y: auto;
+    font-size: 11px;
+    border: 1px solid #eee;
+    border-radius: 3px;
+}
+
+#connectedEdgeList li {
+    padding: 3px 7px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #444;
+}
+
+#connectedEdgeList li:last-child {
+    border-bottom: none;
+}
+
+#validationResult {
+    font-size: 11px;
+    line-height: 1.7;
+    max-height: 120px;
+    overflow-y: auto;
+    margin-top: 6px;
+}
+
+.v-ok {
+    color: #060;
+}
+
+.v-warn {
+    color: #c60;
+}
+
+.v-err {
+    color: #c00;
+}
+
+/* 경로 테스트 */
+.path-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin-bottom: 5px;
+}
+
+.path-row label {
+    font-size: 11px;
+    white-space: nowrap;
+    min-width: 28px;
+}
+
+.path-row select,
+.path-row input {
+    flex: 1;
+    min-width: 0;
+}
+
+#pathResult {
+    font-size: 12px;
+    color: #333;
+    margin: 4px 0;
+    line-height: 1.7;
+}
+
+#pathNodeList {
+    list-style: none;
+    max-height: 150px;
+    overflow-y: auto;
+    font-size: 11px;
+    border: 1px solid #eee;
+    border-radius: 3px;
+    margin-top: 4px;
+}
+
+#pathNodeList li {
+    padding: 3px 7px;
+    border-bottom: 1px solid #f0f0f0;
+    color: #444;
+}
+
+#pathNodeList li.start {
+    color: #060;
+    font-weight: bold;
+}
+
+#pathNodeList li.end {
+    color: #c00;
+    font-weight: bold;
+    border-bottom: none;
+}
+
+.display-radio label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-right: 8px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+/* 경로 선택 탭 */
+.path-tab-row {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 8px;
+}
+
+.path-tab {
+    flex: 1;
+    padding: 4px;
+    font-size: 11px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+    background: #fff;
+}
+
+.path-tab.active {
+    background: #333;
+    color: #fff;
+    border-color: #333;
+}
+
+/* 노드 검색 자동완성 (경로용) */
+.node-search-wrap {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+}
+
+.node-search-wrap input {
+    width: 100%;
+}
+
+.node-autocomplete {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid #ccc;
+    border-top: none;
+    max-height: 130px;
+    overflow-y: auto;
+    z-index: 200;
+    list-style: none;
+}
+
+.node-autocomplete li {
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.node-autocomplete li:hover {
+    background: #f5f5f5;
+}
+
+/*파노라마*/
+#panoCanvas {
+    cursor: grab;
+}
+
+#panoCanvas:active {
+    cursor: grabbing;
+}
+
+#dirCutImg {
+    aspect-ratio: 4/3;
+    object-fit: cover;
+}
+
+#dirPanel {
+    position: fixed;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 380px;
+    min-width: 280px;
+    min-height: 200px;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.18);
+    z-index: 500;
+    overflow: hidden;
+    user-select: none;
+    /* 리사이즈 핸들 */
+    resize: both;
+}
+
+/* 드래그 핸들 */
+#dirPanelHandle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 10px;
+    background: #1a1a2e;
+    color: #e0e0ff;
+    cursor: grab;
+    font-size: 12px;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+#dirPanelHandle:active {
+    cursor: grabbing;
+}
+
+#dirPanelHandle button {
+    background: none;
+    border: 1px solid #555;
+    color: #e0e0ff;
+    padding: 1px 7px;
+    font-size: 12px;
+    cursor: pointer;
+    border-radius: 3px;
+}
+
+#dirPanelHandle button:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+/* 패널 본문 */
+#dirPanelBody {
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    height: calc(100% - 37px);
+    /* 핸들 높이 제외 */
+    box-sizing: border-box;
+    overflow: hidden;
+}
+
+/* 스텝 네비게이션 */
+#dirStepNav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    flex-shrink: 0;
+}
+
+#pathStepLabel {
+    font-size: 12px;
+    color: #555;
+}
+
+/* 노드 정보 */
+#pathStepFrom {
+    font-size: 11px;
+    color: #2563eb;
+    margin-bottom: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+#pathStepTo {
+    font-size: 11px;
+    color: #16a34a;
+    margin-bottom: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-shrink: 0;
+}
+
+/* 이미지 영역 — 남은 공간 모두 차지 */
+#dirImgWrap {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    background: #111;
+    border-radius: 6px;
+    overflow: hidden;
+    min-height: 150px;
+}
+
+#dirCutImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+    /* none 제거 — JS에서 src로 제어 */
+}
+
+#dirOverlay {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+#dirArrow {
+    font-size: 18px;
+}
+
+#dirCutNotice {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: #aaa;
+    padding: 10px;
+    text-align: center;
+    background: #111;
+}
+
+/* 360° 버튼 */
+#pathPanoBtn {
+    display: none;
+    width: 100%;
+    margin-top: 8px;
+    background: #1a1a2e;
+    color: #e0e0ff;
+    border: none;
+    padding: 7px 0;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    letter-spacing: 0.5px;
+    flex-shrink: 0;
+}
+
+#pathPanoBtn:hover {
+    background: #2d2d5e;
+}
+
+.admin-tab-btn.active {
+    color: #1e40af;
+    border-bottom: 2px solid #1e40af;
+    background: #eff6ff;
+}
+
+.admin-tab-btn:hover {
+    background: #f1f5f9;
+}
+
+/* 공통 인풋 */
+.ainput {
+    width: 100%;
+    padding: 8px 10px;
+    font-size: 13px;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    box-sizing: border-box;
+    outline: none;
+    transition: border-color .15s;
+}
+
+.ainput:focus {
+    border-color: #2563eb;
+}
+
+/* 레이블 */
+.alabel {
+    display: block;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+}
+
+/* 버튼 */
+.abtn-primary {
+    width: 100%;
+    padding: 9px;
+    background: #2563eb;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.abtn-primary:hover {
+    background: #1d4ed8;
+}
+
+.abtn-secondary {
+    width: 100%;
+    padding: 9px;
+    background: #f1f5f9;
+    color: #334155;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.abtn-secondary:hover {
+    background: #e2e8f0;
+}
+
+.abtn-danger {
+    width: 100%;
+    padding: 9px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s;
+}
+
+.abtn-danger:hover {
+    background: #dc2626;
+}
+
+/* 구분선 */
+.adivider {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 12px 0;
+}
+
+/* 자동완성 목록 */
+.autocomplete-list {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: #fff;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, .1);
+    z-index: 3000;
+    list-style: none;
+    margin: 2px 0 0;
+    padding: 4px 0;
+    max-height: 180px;
+    overflow-y: auto;
+    font-size: 12px;
+}
+
+.autocomplete-list li {
+    padding: 6px 12px;
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.autocomplete-list li:hover {
+    background: #eff6ff;
+}
+
+/* 토스트 */
+.admin-toast.success {
+    background: #16a34a;
+    color: #fff;
+}
+
+.admin-toast.error {
+    background: #dc2626;
+    color: #fff;
+}
+
+/* 지도 클릭 모드 버튼 */
+#mapClickBtn.active {
+    background: #eff6ff;
+    border-color: #2563eb;
+    color: #1e40af;
+    font-weight: 700;
+}
+
+/* details 스타일 */
+details>summary {
+    user-select: none;
+}
+
+details>summary::-webkit-details-marker {
+    color: #94a3b8;
+}

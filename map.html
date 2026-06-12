@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8"/>
+	<title>map</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+    <div id="map"></div>
+    <div id="controlBox">
+        설정 박스
+        <hr>
+        <P>
+            총 poi 수 : <span id="totalPoi">0</span>
+            <br>
+            현재 활성 마커 수 : <span id="visibleCount">0</span>
+        </P>
+        <hr>
+        <p></p>
+        <div class="typeGrid">
+            <label>
+                <input type="checkbox" id="allCheck" checked>
+                all
+            </label>
+            <label class="crosswalk">
+                <input type="checkbox" id="crosswalk" checked>
+                crosswalk : <span id="crosswalkCount">0</span>
+            </label>
+            <label class="entrance">
+                <input type="checkbox" id="entranceCheck" checked>
+                entrance : <span id="entranceCount">0</span>
+            </label>
+
+            <label class="ramp">
+                <input type="checkbox" id="rampCheck" checked>
+                ramp : <span id="rampCount">0</span>
+            </label>
+
+            <label class="stair">
+                <input type="checkbox" id="stairCheck" checked>
+                stair : <span id="stairCount">0</span>
+            </label>
+
+            <label class="elevator">
+                <input type="checkbox" id="elevatorCheck" checked>
+                elevator : <span id="elevatorCount">0</span>
+            </label>
+        </div>
+        <hr>
+        <p>
+            <label>
+                <input type="checkbox" id="showName">
+                이름 표시
+            </label>
+        </p>
+    </div>
+	<script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=eb4db54bd30b6f413e520ba38a32845f"></script>
+	<script src="map.js"></script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>캠퍼스 관리자</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="graphManager2.css">
+</head>
+
+<body>
+
+    <div id="map"></div>
+
+    <div id="controlBox">
+
+        <!-- ===== NODE ===== -->
+        <div class="box-title">🔵 Node</div>
+
+        <div class="section">
+            총 Node: <b id="totalNode">0</b> &nbsp;|&nbsp; 표시: <b id="visibleCount">0</b>
+        </div>
+
+        <div class="section">
+            <div class="section-title">타입 필터</div>
+            <div id="nodeTypeFilters"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">Node 검색</div>
+            <div id="searchWrapper">
+                <input type="text" id="searchInput" placeholder="ID 또는 이름">
+                <ul id="searchList"></ul>
+            </div>
+        </div>
+
+        <!-- ===== EDGE ===== -->
+        <div class="box-title">🟠 Edge</div>
+
+        <div class="section">
+            총 Edge: <b id="totalEdge">0</b> &nbsp;|&nbsp; 표시: <b id="visibleEdgeCount">0</b>
+        </div>
+
+        <div class="section">
+            <div class="section-title">표시 제어</div>
+            <div class="btn-row">
+                <button onclick="toggleEdges(true)">전체 표시</button>
+                <button onclick="toggleEdges(false)">전체 숨기기</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">타입 필터</div>
+            <div id="edgeTypeFilters"></div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">선택 Node 연결 Edge</div>
+            <div id="selectedNodeInfo">없음</div>
+            <div id="panoBtnWrap" style="display:none; margin: 6px 0;">
+                <button>🔭 360° 뷰어 열기</button>
+            </div>
+            <div id="nodeIdRow">
+                <input type="text" id="nodeIdInput" placeholder="Node ID">
+                <button onclick="selectNodeById()">적용</button>
+                <button onclick="clearSelection()">해제</button>
+            </div>
+            <div style="margin-bottom:5px;font-size:11px;color:#888;">※ 마커 클릭해도 됩니다</div>
+            <div style="font-size:11px;color:#555;margin-bottom:4px;">연결된 Edge: <b id="connectedEdgeCount">0</b>개</div>
+            <ul id="connectedEdgeList"></ul>
+        </div>
+
+        <!-- ===== 검증 ===== -->
+        <div class="box-title">🔍 검증</div>
+
+        <div class="section">
+            <div class="btn-row">
+                <button onclick="checkIsolated()">고립 노드 탐지</button>
+                <button onclick="checkDuplicates()">중복 엣지 탐지</button>
+                <button onclick="clearHighlight()">해제</button>
+            </div>
+            <div id="validationResult"></div>
+        </div>
+
+        <!-- ===== 경로 테스트 ===== -->
+        <div class="box-title">🗺️ 경로 테스트</div>
+
+        <div class="section">
+            <div class="section-title">선택 방식</div>
+            <div class="path-tab-row">
+                <div class="path-tab active" id="tabBuilding" onclick="switchPathTab('building')">건물 선택</div>
+                <div class="path-tab" id="tabNode" onclick="switchPathTab('node')">노드 직접 선택</div>
+            </div>
+
+            <!-- 건물 선택 모드 -->
+            <div id="modeBuilding">
+                <div class="path-row">
+                    <label>출발</label>
+                    <select id="pathFromBuilding" onchange="onBuildingSelectChange('from')"></select>
+                </div>
+                <div id="pathFromEntranceRow" class="path-row" style="display:none;">
+                    <label style="font-size:11px;color:#888;">↳ 입구</label>
+                    <select id="pathFromEntrance" style="font-size:11px;"></select>
+                </div>
+                <div class="path-row">
+                    <label>도착</label>
+                    <select id="pathToBuilding" onchange="onBuildingSelectChange('to')"></select>
+                </div>
+                <div id="pathToEntranceRow" class="path-row" style="display:none;">
+                    <label style="font-size:11px;color:#888;">↳ 입구</label>
+                    <select id="pathToEntrance" style="font-size:11px;"></select>
+                </div>
+            </div>
+            <!-- 노드 직접 선택 모드 -->
+            <div id="modeNode" style="display:none;">
+                <div class="path-row">
+                    <label>출발</label>
+                    <div class="node-search-wrap">
+                        <input type="text" id="pathFromNodeInput" placeholder="ID 또는 이름" autocomplete="off">
+                        <ul class="node-autocomplete" id="pathFromList"></ul>
+                    </div>
+                </div>
+                <div class="path-row">
+                    <label>도착</label>
+                    <div class="node-search-wrap">
+                        <input type="text" id="pathToNodeInput" placeholder="ID 또는 이름" autocomplete="off">
+                        <ul class="node-autocomplete" id="pathToList"></ul>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:#888;margin-bottom:4px;">
+                    출발: <b id="pathFromNodeId">미선택</b> &nbsp; 도착: <b id="pathToNodeId">미선택</b>
+                </div>
+            </div>
+
+            <div style="margin: 6px 0;">
+                <label style="font-size:12px;cursor:pointer;">
+                    <input type="checkbox" id="wheelchairMode"> 휠체어 모드 (계단 제외)
+                </label>
+            </div>
+            <div class="btn-row">
+                <button onclick="runPathTest()">경로 찾기</button>
+                <button onclick="clearPathTest()">초기화</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <div class="section-title">경로 중 노드 표시</div>
+            <div class="display-radio">
+                <label><input type="radio" name="pathDisplay" value="all" checked onchange="onPathDisplayChange()">
+                    모두</label>
+                <label><input type="radio" name="pathDisplay" value="path" onchange="onPathDisplayChange()"> 경로만</label>
+                <label><input type="radio" name="pathDisplay" value="filter" onchange="onPathDisplayChange()">
+                    필터</label>
+            </div>
+        </div>
+
+        <div class="section">
+            <div id="pathResult">경로를 선택하세요.</div>
+            <ul id="pathNodeList"></ul>
+        </div>
+    </div>
+    <!-- ===== 방향 컷 플로팅 패널 ===== -->
+    <div id="dirPanel" style="display:none;">
+        <div id="dirPanelHandle">
+            <span id="dirPanelTitle">📷 경로 뷰어</span>
+            <div style="display:flex;gap:6px;align-items:center;">
+
+                <button onclick="closeDirPanel()" title="닫기">✕</button>
+            </div>
+        </div>
+        <div id="dirPanelBody">
+            <div id="dirStepNav">
+                <button onclick="prevPathStep()">◀</button>
+                <span id="pathStepLabel"></span>
+                <button onclick="nextPathStep()">▶</button>
+            </div>
+            <div id="pathStepFrom"></div>
+            <div id="pathStepTo"></div>
+            <div id="dirImgWrap">
+                <img id="dirCutImg">
+                <div id="dirOverlay">
+                    <span id="dirArrow"></span>
+                    <span id="dirDegree"></span>
+                </div>
+                <div id="dirCutNotice"></div>
+            </div>
+            <button id="pathPanoBtn" onclick="">🔭 360° 전체 보기</button>
+        </div>
+
+    </div>
+    <!-- ===== 파노라마 전체화면 오버레이 ===== -->
+    <div id="panoOverlay"
+        style="display:none; position:fixed; inset:0; z-index:9999; background:#000; flex-direction:column;">
+        <div style="display:flex; align-items:center; justify-content:space-between;
+            padding:10px 16px; background:rgba(0,0,0,0.7);
+            position:absolute; top:0; left:0; right:0; z-index:1;">
+            <span id="panoTitle" style="color:#fff; font-size:14px; font-weight:600;"></span>
+            <div style="display:flex; align-items:center; gap:12px;">
+                <span style="color:#aaa; font-size:11px;">드래그로 시점 이동 &nbsp;|&nbsp; 스크롤로 줌</span>
+                <button onclick="closePanoViewer()" style="background:none; border:1px solid #555; color:#fff;
+                    padding:4px 12px; border-radius:4px; cursor:pointer; font-size:13px;">✕ 닫기</button>
+            </div>
+        </div>
+        <canvas id="panoCanvas" style="width:100%; height:100%; display:block; cursor:grab;"></canvas>
+        <div id="panoNotice" style="display:none; position:absolute; bottom:24px; left:50%; transform:translateX(-50%);
+            background:rgba(0,0,0,0.65); color:#ddd; font-size:13px;
+            padding:8px 18px; border-radius:20px; pointer-events:none;"></div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script type="text/javascript" src="//dapi.kakao.com/v2/maps/sdk.js?appkey=__KAKAO_KEY__"></script>
+    <script src="graphManager2.js"></script>
+    <script src="adminPanel.js"></script>
+    <!-- 관리자 버튼 -->
+    <button id="adminToggleBtn" onclick="toggleAdminPanel()" style="position:fixed;bottom:24px;right:24px;z-index:1000;
+               width:52px;height:52px;border-radius:50%;
+               background:#1e40af;color:#fff;border:none;
+               font-size:22px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,0.3);
+               display:flex;align-items:center;justify-content:center;" title="관리자 패널">⚙️</button>
+
+    <!-- 토스트 알림 -->
+    <div id="adminToast" style="display:none;position:fixed;bottom:90px;right:24px;
+     z-index:2000;padding:10px 18px;border-radius:8px;font-size:13px;
+     font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);max-width:320px;
+     word-break:break-all;"></div>
+
+    <!-- 관리자 패널 -->
+    <div id="adminPanel" style="display:none;position:fixed;top:0;right:0;
+     height:100vh;width:380px;background:#fff;z-index:1500;
+     box-shadow:-4px 0 20px rgba(0,0,0,0.15);
+     flex-direction:column;overflow:hidden;font-family:'Pretendard',sans-serif;">
+
+        <!-- 헤더 -->
+        <div style="background:#1e40af;color:#fff;padding:14px 16px;
+              display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
+            <span style="font-size:15px;font-weight:700;">🗂 관리자 CRUD 패널</span>
+            <button onclick="toggleAdminPanel()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;
+                   line-height:1;">✕</button>
+        </div>
+
+        <!-- 탭 버튼 -->
+        <div style="display:flex;border-bottom:2px solid #e2e8f0;flex-shrink:0;">
+            <button class="admin-tab-btn active" data-tab="poi" onclick="switchAdminTab('poi')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
+                   background:none;cursor:pointer;">📍 노드</button>
+            <button class="admin-tab-btn" data-tab="photo" onclick="switchAdminTab('photo')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
+                   background:none;cursor:pointer;">📷 사진</button>
+            <button class="admin-tab-btn" data-tab="edge" onclick="switchAdminTab('edge')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
+                   background:none;cursor:pointer;">🔗 엣지</button>
+            <button class="admin-tab-btn" data-tab="entrance" onclick="switchAdminTab('entrance')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
+                   background:none;cursor:pointer;">🏢 입구</button>
+        </div>
+
+        <!-- 스크롤 영역 -->
+        <div style="overflow-y:auto;flex:1;padding:16px;">
+
+            <!-- ══════════ POI 탭 ══════════ -->
+            <div class="admin-tab-pane" data-pane="poi">
+
+                <!-- 노드 추가 -->
+                <details open>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#1e40af;">
+                        ➕ 노드 추가
+                    </summary>
+                    <div style="display:grid;gap:8px;">
+                        <div>
+                            <label class="alabel">이름</label>
+                            <input id="addPoiName" class="ainput" placeholder="예) 공학관 정문 경사로">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label class="alabel">위도</label>
+                                <input id="addPoiLat" class="ainput" type="number" step="0.0000001"
+                                    placeholder="37.55843">
+                            </div>
+                            <div>
+                                <label class="alabel">경도</label>
+                                <input id="addPoiLng" class="ainput" type="number" step="0.0000001"
+                                    placeholder="127.04983">
+                            </div>
+                        </div>
+                        <div>
+                            <button id="mapClickBtn" onclick="toggleMapClickMode()" style="width:100%;padding:7px;font-size:12px;border:1.5px dashed #94a3b8;
+                           background:#f8fafc;border-radius:6px;cursor:pointer;">
+                                📌 지도 클릭으로 좌표 입력
+                            </button>
+                        </div>
+                        <div>
+                            <label class="alabel">타입</label>
+                            <select id="addPoiType" class="ainput">
+                                <option value="entrance">entrance</option>
+                                <option value="ramp">ramp</option>
+                                <option value="stair">stair</option>
+                                <option value="elevator">elevator</option>
+                                <option value="crosswalk">crosswalk</option>
+                                <option value="path">path</option>
+                                <option value="building">building</option>
+                            </select>
+                        </div>
+                        <button class="abtn-primary" onclick="adminAddPoi()">추가하기</button>
+                    </div>
+                </details>
+
+                <hr class="adivider">
+
+                <!-- 노드 수정 -->
+                <details>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#0369a1;">
+                        ✏️ 노드 수정
+                    </summary>
+                    <div style="display:grid;gap:8px;">
+                        <div style="position:relative;">
+                            <label class="alabel">노드 이름 (검색)</label>
+                            <input id="editPoiId" class="ainput" placeholder=" 이름으로 검색">
+                            <ul id="editPoiIdList" class="autocomplete-list"></ul>
+                        </div>
+                        <button class="abtn-secondary" onclick="fillEditForm()" style="font-size:12px;">
+                            🔍 정보 불러오기
+                        </button>
+                        <div>
+                            <label class="alabel">이름</label>
+                            <input id="editPoiName" class="ainput" placeholder="새 이름">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label class="alabel">위도</label>
+                                <input id="editPoiLat" class="ainput" type="number" step="0.0000001">
+                            </div>
+                            <div>
+                                <label class="alabel">경도</label>
+                                <input id="editPoiLng" class="ainput" type="number" step="0.0000001">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="alabel">타입</label>
+                            <select id="editPoiType" class="ainput">
+                                <option value="entrance">entrance</option>
+                                <option value="ramp">ramp</option>
+                                <option value="stair">stair</option>
+                                <option value="elevator">elevator</option>
+                                <option value="crosswalk">crosswalk</option>
+                                <option value="path">path</option>
+                                <option value="building">building</option>
+                            </select>
+                        </div>
+                        <button class="abtn-primary" onclick="adminUpdatePoi()">수정하기</button>
+                    </div>
+                </details>
+
+                <hr class="adivider">
+
+                <!-- 노드 삭제 -->
+                <details>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#b91c1c;">
+                        🗑 노드 삭제
+                    </summary>
+                    <p style="font-size:11px;color:#ef4444;margin:0 0 8px;">
+                        ⚠️ 삭제 시 연결된 모든 엣지·입구 관계도 함께 삭제됩니다.
+                    </p>
+                    <div style="position:relative;">
+                        <input id="deletePoiId" class="ainput" placeholder="삭제할 이름">
+                        <ul id="deletePoiIdList" class="autocomplete-list"></ul>
+                    </div>
+                    <button class="abtn-danger" onclick="adminDeletePoi()" style="margin-top:8px;">삭제하기</button>
+                </details>
+            </div>
+
+            <!-- ══════════ 사진 탭 ══════════ -->
+            <div class="admin-tab-pane" data-pane="photo" style="display:none;">
+                <div style="display:grid;gap:10px;">
+                    <div style="position:relative;">
+                        <label class="alabel">노드 이름(검색)</label>
+                        <input id="photoPoiId" class="ainput" placeholder="이름으로 검색">
+                        <ul id="photoPoidList" class="autocomplete-list"></ul>
+                    </div>
+
+                    <div>
+                        <label class="alabel">파노라마 사진 파일 (JPG/PNG, 최대 50MB)</label>
+                        <input id="photoFile" type="file" accept="image/*" style="width:100%;padding:6px;font-size:12px;border:1px solid #e2e8f0;
+                        border-radius:6px;box-sizing:border-box;">
+                    </div>
+
+                    <img id="photoPreview" style="display:none;width:100%;border-radius:8px;
+             max-height:160px;object-fit:cover;border:1px solid #e2e8f0;">
+
+                    <div id="uploadProgressWrap" style="display:none;">
+                        <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;">
+                            <div id="uploadProgress"
+                                style="height:100%;background:#2563eb;transition:width 0.2s;border-radius:99px;"></div>
+                        </div>
+                        <p style="font-size:11px;color:#64748b;margin:4px 0 0;">업로드 중...</p>
+                    </div>
+
+                    <button class="abtn-primary" onclick="adminUploadPhoto()">📤 사진 업로드</button>
+
+                    <hr class="adivider" style="margin:4px 0;">
+                    <p style="font-size:11px;color:#64748b;margin:0;">기존 사진을 서버에서 완전히 삭제합니다.</p>
+                    <button class="abtn-danger" onclick="adminDeletePhoto()">🗑 사진 삭제</button>
+                </div>
+            </div>
+
+            <!-- ══════════ 엣지 탭 ══════════ -->
+            <div class="admin-tab-pane" data-pane="edge" style="display:none;">
+
+                <!-- 엣지 추가 -->
+                <details open>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#1e40af;">
+                        ➕ 엣지 추가
+                    </summary>
+                    <div style="display:grid;gap:8px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label class="alabel">출발 노드 이름</label>
+                                <input id="addEdgeFrom" class="ainput" placeholder="노드 이름으로 검색">
+                                <ul id="addEdgeFromList" class="autocomplete-list"></ul>
+
+                            </div>
+                            <div>
+                                <label class="alabel">도착 노드 이름</label>
+                                <input id="addEdgeTo" class="ainput" placeholder="노드 이름으로 검색">
+                                <ul id="addEdgeToList" class="autocomplete-list"></ul>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
+                            <div>
+                                <label class="alabel">거리 (m)</label>
+                                <input id="addEdgeWeight" class="ainput" type="number" step="0.1" placeholder="0.0">
+                            </div>
+                            <button class="abtn-secondary" onclick="calcEdgeDistance()"
+                                style="padding:8px 10px;font-size:11px;white-space:nowrap;">
+                                📏 자동계산
+                            </button>
+                        </div>
+                        <div>
+                            <label class="alabel">타입</label>
+                            <select id="addEdgeType" class="ainput">
+                                <option value="path">path</option>
+                                <option value="ramp">ramp</option>
+                                <option value="stair">stair</option>
+                                <option value="elevator">elevator</option>
+                                <option value="crosswalk">crosswalk</option>
+                            </select>
+                        </div>
+                        <button class="abtn-primary" onclick="adminAddEdge()">추가하기</button>
+                    </div>
+                </details>
+
+                <hr class="adivider">
+
+                <!-- 엣지 삭제 -->
+                <details>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#b91c1c;">
+                        🗑 엣지 삭제
+                    </summary>
+                    <div style="display:grid;gap:8px;">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label class="alabel">출발 노드 이름</label>
+                                <input id="deleteEdgeFrom" class="ainput" placeholder="노드 이름으로 검색">
+                                <ul id="deleteEdgeFromList" class="autocomplete-list"></ul>
+                            </div>
+                            <div>
+                                <label class="alabel">도착 노드 이름</label>
+                                <input id="deleteEdgeTo" class="ainput" placeholder="노드 이름으로 검색">
+                                <ul id="deleteEdgeToList" class="autocomplete-list"></ul>
+                            </div>
+                        </div>
+                        <p style="font-size:11px;color:#64748b;margin:0;">양방향 엣지를 한 번에 삭제합니다.</p>
+                        <button class="abtn-danger" onclick="adminDeleteEdge()">삭제하기</button>
+                    </div>
+                </details>
+
+                <!-- 선택된 노드의 엣지 빠른 삭제 -->
+                <hr class="adivider">
+                <details>
+                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px;color:#0369a1;">
+                        ⚡ 선택된 노드 기반 빠른 삭제
+                    </summary>
+                    <p style="font-size:11px;color:#64748b;margin:0 0 8px;">
+                        왼쪽 패널에서 노드를 클릭하면 연결된 엣지가 아래에 표시됩니다.
+                    </p>
+                    <div id="adminConnectedEdges" style="font-size:12px;color:#475569;"></div>
+                </details>
+            </div>
+
+            <!-- ══════════ 입구 탭 ══════════ -->
+            <div class="admin-tab-pane" data-pane="entrance" style="display:none;">
+                <div style="display:grid;gap:10px;">
+                    <div>
+                        <label class="alabel">건물 이름</label>
+                        <input id="entranceBuildingId" class="ainput" placeholder="건물 이름으로 검색">
+                        <ul id="entranceBuildingList" class="autocomplete-list"></ul>
+                    </div>
+
+                    <!-- 현재 입구 목록 -->
+                    <div style="background:#f8fafc;border-radius:8px;padding:10px;border:1px solid #e2e8f0;">
+                        <p style="font-size:12px;font-weight:600;margin:0 0 6px;color:#475569;">현재 등록된 입구</p>
+                        <ul id="entranceCurrentList"
+                            style="margin:0;padding:0 0 0 12px;font-size:12px;color:#64748b;line-height:2;">
+                            <li>건물을 입력하면 표시됩니다.</li>
+                        </ul>
+                    </div>
+
+                    <hr class="adivider" style="margin:0;">
+
+                    <div>
+                        <label class="alabel">입구 노드 이름</label>
+                        <input id="entranceNodeId" class="ainput" placeholder="입구 노드 이름으로 검색">
+                        <ul id="entranceNodeList" class="autocomplete-list"></ul>
+                    </div>
+
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button class="abtn-primary" onclick="adminAddEntrance()">입구 추가</button>
+                        <button class="abtn-danger" onclick="adminDeleteEntrance()">입구 삭제</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+
+</body>
+
+</html>
