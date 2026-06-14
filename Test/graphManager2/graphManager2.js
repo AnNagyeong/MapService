@@ -106,6 +106,7 @@ Promise.all([
         initEdges(edgeData);
         initEdgeTypeFilters(edgeData);
         initPathSelects();
+        initCoordPathSearch();
 
         document.getElementById("totalNode").innerText = allPoi.filter(p => p.type !== "building").length;
         document.getElementById("totalEdge").innerText = edgeData.length;
@@ -179,7 +180,49 @@ function initNodeTypeFilters(poi) {
         updateNodeMarkers();
     });
 }
+function initCoordPathSearch() {
+    const latInput = document.getElementById("pathFromLat");
+    const lngInput = document.getElementById("pathFromLng");
 
+    function updateNearest() {
+        const lat = parseFloat(latInput.value);
+        const lng = parseFloat(lngInput.value);
+        if (isNaN(lat) || isNaN(lng)) {
+            document.getElementById("nearestNodeLabel").textContent = "미입력";
+            return;
+        }
+        const nearest = findNearestNodeAny(lat, lng);
+        if (nearest) {
+            document.getElementById("nearestNodeLabel").textContent =
+                `${nearest.name} (${haversine(lat, lng, nearest.lat, nearest.lng)}m)`;
+        }
+    }
+
+    latInput.addEventListener("input", updateNearest);
+    lngInput.addEventListener("input", updateNearest);
+
+    // 도착 노드 자동완성
+    setupNodeAutocomplete(
+        document.getElementById("pathToNodeInputCoord"),
+        document.getElementById("pathToListCoord"),
+        id => {
+            pathToNodeId = id;
+            document.getElementById("pathToNodeIdCoord").textContent =
+                `#${id} ${nodeMap[id]?.name || ""}`;
+        }
+    );
+}
+
+// building 제외 없이 모든 노드 중 가장 가까운 노드
+function findNearestNodeAny(lat, lng) {
+    let minDist = Infinity, nearest = null;
+    allPoi.forEach(p => {
+        if (p.type === "building") return;
+        const d = haversine(lat, lng, p.lat, p.lng);
+        if (d < minDist) { minDist = d; nearest = p; }
+    });
+    return nearest;
+}
 function syncAllCheck(allId, selector) {
     const allCbs = document.querySelectorAll(selector);
     document.getElementById(allId).checked = [...allCbs].every(cb => cb.checked);
@@ -219,7 +262,7 @@ function selectNode(id) {
     connected.forEach(({ edge: e }) => {
         const li = document.createElement("li");
         const fromName = nodeMap[e.from]?.name || e.from;
-        const toName   = nodeMap[e.to]?.name   || e.to;
+        const toName = nodeMap[e.to]?.name || e.to;
         li.textContent = `${fromName} ↔ ${toName}  |  ${e.type}  ${e.weight.toFixed(2)}m`;
         listEl.appendChild(li);
     });
@@ -507,11 +550,16 @@ function onBuildingSelectChange(side) {
 
 // 탭 전환
 function switchPathTab(tab) {
+    // 좌표 클릭 모드 중 탭 전환 시 자동 해제
+    if (coordClickMode) toggleCoordClickMode();
+
     pathTab = tab;
     document.getElementById("tabBuilding").classList.toggle("active", tab === "building");
     document.getElementById("tabNode").classList.toggle("active", tab === "node");
+    document.getElementById("tabCoord").classList.toggle("active", tab === "coord");
     document.getElementById("modeBuilding").style.display = tab === "building" ? "" : "none";
     document.getElementById("modeNode").style.display = tab === "node" ? "" : "none";
+    document.getElementById("modeCoord").style.display = tab === "coord" ? "" : "none";
 }
 
 // 노드 직접 선택 — 자동완성
@@ -697,6 +745,21 @@ function runPathTest() {
 
         labelFrom = fromB.name;
         labelTo = toB.name;
+    } else if (pathTab === "coord") {
+        const lat = parseFloat(document.getElementById("pathFromLat").value);
+        const lng = parseFloat(document.getElementById("pathFromLng").value);
+        if (isNaN(lat) || isNaN(lng)) {
+            resultEl.textContent = "좌표를 입력하세요."; return;
+        }
+        if (!pathToNodeId) {
+            resultEl.textContent = "도착 노드를 선택하세요."; return;
+        }
+        const nearest = findNearestNodeAny(lat, lng);
+        if (!nearest) { resultEl.textContent = "주변 노드를 찾을 수 없습니다."; return; }
+
+        result = dijkstra(nearest.id, pathToNodeId, edges, wheelchair);
+        labelFrom = `📍 입력 좌표 → ${nearest.name}`;
+        labelTo = `#${pathToNodeId} ${nodeMap[pathToNodeId]?.name || ""}`;
     } else {
         // 노드 직접 선택
         if (!pathFromNodeId || !pathToNodeId) {
@@ -926,7 +989,6 @@ function showPathStep(stepIndex) {
     const toNode = nodeMap[pathNodeIds[stepIndex + 1]];
     if (!fromNode || !toNode) return;
 
-    // 스텝 UI 업데이트
     document.getElementById("pathStepLabel").textContent =
         `${stepIndex + 1} / ${pathNodeIds.length - 1} 스텝`;
     document.getElementById("pathStepFrom").textContent =
@@ -940,7 +1002,6 @@ function showPathStep(stepIndex) {
     const dirNotice = document.getElementById("dirCutNotice");
     const panoBtn = document.getElementById("pathPanoBtn");
 
-    // 파노 버튼: fromNode에 사진 있으면 활성화
     if (fromNode.panorama_url) {
         panoBtn.style.display = "";
         panoBtn.onclick = () => openPanoViewerWithBearing(fromNode, bearing);
@@ -950,37 +1011,49 @@ function showPathStep(stepIndex) {
 
     if (!fromNode.panorama_url) {
         dirImg.style.display = "none";
+        dirImg.src = "";          // ← src 명시적 초기화
         dirNotice.style.display = "";
         dirNotice.textContent = "📷 이 노드에는 사진이 없습니다.";
+        dirCutImg = null;
+        dirCutUrl = null;
         return;
     }
 
     dirNotice.style.display = "";
     dirNotice.textContent = "⏳ 사진 불러오는 중...";
     dirImg.src = "";
+    dirImg.style.display = "none";
 
-    // 이미지 로드 (같은 URL이면 캐시 재사용)
     function renderCut(img) {
         const dataUrl = extractDirectionCut(img, bearing);
         dirImg.src = dataUrl;
+        dirImg.style.display = "";   // ← 사진 있을 때 다시 표시
         dirNotice.style.display = "none";
-
-        // 방향 화살표 오버레이 업데이트
         document.getElementById("dirArrow").textContent = bearingToArrow(bearing);
         document.getElementById("dirDegree").textContent =
             `${Math.round(bearing)}° ${bearingToLabel(bearing)}`;
     }
 
-    if (dirCutUrl === fromNode.panorama_url && dirCutImg) {
+    const url = 'http://localhost:3000' + fromNode.panorama_url;
+
+    if (dirCutUrl === fromNode.panorama_url && dirCutImg && dirCutImg.complete) {
         renderCut(dirCutImg);
     } else {
-        dirCutImg = new Image();
-        dirCutImg.crossOrigin = "anonymous";
-        dirCutImg.onload = () => { dirCutUrl = fromNode.panorama_url; renderCut(dirCutImg); };
-        dirCutImg.onerror = () => {
-            dirNotice.textContent = "⚠ 이미지를 불러올 수 없습니다.";
+        dirCutImg = null;
+        dirCutUrl = null;
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = () => {
+            dirCutImg = img;
+            dirCutUrl = fromNode.panorama_url;
+            renderCut(img);
         };
-        dirCutImg.src = 'http://localhost:3000' + fromNode.panorama_url;
+        img.onerror = () => {
+            dirNotice.textContent = "⚠ 이미지를 불러올 수 없습니다.";
+            dirCutImg = null;
+            dirCutUrl = null;
+        };
+        img.src = url;
     }
 }
 

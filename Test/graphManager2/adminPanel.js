@@ -142,6 +142,56 @@ function toggleMapClickMode() {
     }
 }
 
+let coordClickMode = false;
+let coordClickListener = null;
+let coordMarker = null; // 전역 변수로 추가
+
+function toggleCoordClickMode() {
+    coordClickMode = !coordClickMode;
+    const btn = document.getElementById('coordClickBtn');
+
+    if (coordClickMode) {
+        btn.textContent = '📌 클릭 중... (취소)';
+        btn.style.borderColor = '#2563eb';
+        btn.style.background = '#eff6ff';
+        map.setCursor('crosshair');  // 마우스 포인터 변경
+
+        coordClickListener = kakao.maps.event.addListener(map, 'click', (mouseEvent) => {
+            const latlng = mouseEvent.latLng;
+            const lat = latlng.getLat();
+            const lng = latlng.getLng();
+
+            document.getElementById('pathFromLat').value = lat.toFixed(7);
+            document.getElementById('pathFromLng').value = lng.toFixed(7);
+
+            // 기존 마커 제거 후 새 마커 표시
+            if (coordMarker) coordMarker.setMap(null);
+            coordMarker = new kakao.maps.Marker({
+                map,
+                position: latlng,
+            });
+
+            // 가장 가까운 노드 업데이트
+            const nearest = findNearestNodeAny(lat, lng);
+            if (nearest) {
+                document.getElementById('nearestNodeLabel').textContent =
+                    `${nearest.name} (${haversine(lat, lng, nearest.lat, nearest.lng).toFixed(1)}m)`;
+            }
+
+            toggleCoordClickMode();
+        });
+    } else {
+        btn.textContent = '📌 지도 클릭으로 출발 좌표 입력';
+        btn.style.borderColor = '#94a3b8';
+        btn.style.background = '#f8fafc';
+        map.setCursor('');  // 마우스 포인터 복원
+        if (coordClickListener) {
+            kakao.maps.event.removeListener(coordClickListener);
+            coordClickListener = null;
+        }
+    }
+}
+
 /* ── 노드 수정 ───────────────────────────────────────────── */
 async function adminUpdatePoi() {
     const id = document.getElementById('editPoiId').value.trim();
@@ -351,16 +401,22 @@ function setupAdminAutocomplete(inputId, listId) {
                 list.style.display = 'none';
                 // editPoiId면 자동 채우기
                 if (inputId === 'editPoiId') fillEditForm();
+                if (inputId === 'photoPoiId') {
+                    const preview = document.getElementById('photoPreview');
+                    if (p.panorama_url) {
+                        preview.src = `${API}${p.panorama_url}`;
+                        preview.style.display = 'block';
+                    } else {
+                        preview.src = '';
+                        preview.style.display = 'none';
+                    }
+                }
             });
             list.appendChild(li);
         });
         list.style.display = 'block';
     });
 
-    document.addEventListener('click', e => {
-        if (!e.target.closest(`#${inputId}`) && !e.target.closest(`#${listId}`))
-            list.style.display = 'none';
-    });
 }
 
 /* =============================================

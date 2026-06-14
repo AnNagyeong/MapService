@@ -90,6 +90,7 @@
             <div class="path-tab-row">
                 <div class="path-tab active" id="tabBuilding" onclick="switchPathTab('building')">건물 선택</div>
                 <div class="path-tab" id="tabNode" onclick="switchPathTab('node')">노드 직접 선택</div>
+                <div class="path-tab" id="tabCoord" onclick="switchPathTab('coord')">좌표 입력</div>
             </div>
 
             <!-- 건물 선택 모드 -->
@@ -111,6 +112,7 @@
                     <select id="pathToEntrance" style="font-size:11px;"></select>
                 </div>
             </div>
+
             <!-- 노드 직접 선택 모드 -->
             <div id="modeNode" style="display:none;">
                 <div class="path-row">
@@ -132,6 +134,34 @@
                 </div>
             </div>
 
+            <!-- 좌표 입력 모드 -->
+            <div id="modeCoord" style="display:none;">
+                <div class="path-row">
+                    <label>출발 위도</label>
+                    <input type="number" id="pathFromLat" step="0.0000001" placeholder="37.5584349">
+                </div>
+                <div class="path-row">
+                    <label>출발 경도</label>
+                    <input type="number" id="pathFromLng" step="0.0000001" placeholder="127.0498309">
+                </div>
+                <button id="coordClickBtn" onclick="toggleCoordClickMode()" style="width:100%;padding:7px;font-size:12px;border:1.5px dashed #94a3b8;
+                        background:#f8fafc;border-radius:6px;cursor:pointer;margin-bottom:6px;">
+                    📌 지도 클릭으로 출발 좌표 입력
+                </button>
+                <div style="font-size:11px;color:#888;margin-bottom:4px;">
+                    → 가장 가까운 노드: <b id="nearestNodeLabel">미입력</b>
+                </div>
+                <div class="path-row">
+                    <label>도착</label>
+                    <div class="node-search-wrap">
+                        <input type="text" id="pathToNodeInputCoord" placeholder="ID 또는 이름" autocomplete="off">
+                        <ul class="node-autocomplete" id="pathToListCoord"></ul>
+                    </div>
+                </div>
+                <div style="font-size:11px;color:#888;margin-bottom:4px;">
+                    도착: <b id="pathToNodeIdCoord">미선택</b>
+                </div>
+            </div>
             <div style="margin: 6px 0;">
                 <label style="font-size:12px;cursor:pointer;">
                     <input type="checkbox" id="wheelchairMode"> 휠체어 모드 (계단 제외)
@@ -142,13 +172,13 @@
                 <button onclick="clearPathTest()">초기화</button>
             </div>
         </div>
-
         <div class="section">
             <div class="section-title">경로 중 노드 표시</div>
             <div class="display-radio">
                 <label><input type="radio" name="pathDisplay" value="all" checked onchange="onPathDisplayChange()">
                     모두</label>
-                <label><input type="radio" name="pathDisplay" value="path" onchange="onPathDisplayChange()"> 경로만</label>
+                <label><input type="radio" name="pathDisplay" value="path" onchange="onPathDisplayChange()">
+                    경로만</label>
                 <label><input type="radio" name="pathDisplay" value="filter" onchange="onPathDisplayChange()">
                     필터</label>
             </div>
@@ -385,7 +415,8 @@
                     <div id="uploadProgressWrap" style="display:none;">
                         <div style="background:#e2e8f0;border-radius:99px;height:8px;overflow:hidden;">
                             <div id="uploadProgress"
-                                style="height:100%;background:#2563eb;transition:width 0.2s;border-radius:99px;"></div>
+                                style="height:100%;background:#2563eb;transition:width 0.2s;border-radius:99px;">
+                            </div>
                         </div>
                         <p style="font-size:11px;color:#64748b;margin:4px 0 0;">업로드 중...</p>
                     </div>
