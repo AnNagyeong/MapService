@@ -797,6 +797,7 @@ function runPathTest() {
         strokeOpacity: 0.9,
         zIndex: 5
     });
+    showPathEndpoints(result.path);
 
     // 경로 노드 목록
     const listEl = document.getElementById("pathNodeList");
@@ -822,11 +823,44 @@ function runPathTest() {
 
 function clearPathTest() {
     if (pathPolyline) { pathPolyline.setMap(null); pathPolyline = null; }
+    if (pathStartOverlay) { pathStartOverlay.setMap(null); pathStartOverlay = null; }
+    if (pathEndOverlay) { pathEndOverlay.setMap(null); pathEndOverlay = null; }
     pathNodeIds = [];
     document.getElementById("pathResult").textContent = "경로를 선택하세요.";
     document.getElementById("pathNodeList").innerHTML = "";
     updateNodeMarkers();
     clearPathStepViewer();
+}
+// 출발, 도착 강조
+let pathStartOverlay = null;
+let pathEndOverlay = null;
+
+function showPathEndpoints(path) {
+    if (pathStartOverlay) pathStartOverlay.setMap(null);
+    if (pathEndOverlay) pathEndOverlay.setMap(null);
+
+    const startNode = nodeMap[path[0]];
+    const endNode = nodeMap[path[path.length - 1]];
+    if (!startNode || !endNode) return;
+
+    const makeOverlay = (node, color, label) => new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(node.lat, node.lng),
+        content: `
+        <div style="
+            background:${color}; color:#fff;
+            font-size:11px; font-weight:700;
+            padding:3px 8px; border-radius:12px;
+            white-space:nowrap;
+            box-shadow:0 2px 6px rgba(0,0,0,0.3);
+        ">${label}</div>
+    `,
+        yAnchor: 1.5,
+        zIndex: 9
+    });
+
+    pathStartOverlay = makeOverlay(startNode, '#16a34a', '출발');
+    pathEndOverlay = makeOverlay(endNode, '#dc2626', '도착');
 }
 
 function onPathDisplayChange() {
@@ -979,6 +1013,8 @@ function extractDirectionCut(img, bearing, fovH = 90) {
    stepIndex: 현재 보여줄 스텝 (0 = 첫 노드)
 -------------------------------------------------- */
 let currentPathStep = 0;
+let currentStepMarker = null;
+let currentStepOverlay = null;
 
 function showPathStep(stepIndex) {
     if (!pathNodeIds || pathNodeIds.length < 2) return;
@@ -989,12 +1025,30 @@ function showPathStep(stepIndex) {
     const toNode = nodeMap[pathNodeIds[stepIndex + 1]];
     if (!fromNode || !toNode) return;
 
+    // 현재 위치 강조 오버레이 (fromNode 선언 후로 이동)
+    if (currentStepOverlay) currentStepOverlay.setMap(null);
+    currentStepOverlay = new kakao.maps.CustomOverlay({
+        map,
+        position: new kakao.maps.LatLng(fromNode.lat, fromNode.lng),
+        content: `
+            <div style="
+                width:20px; height:20px;
+                background:#2563eb;
+                border:3px solid #fff;
+                border-radius:50%;
+                box-shadow:0 0 0 3px #2563eb;
+            "></div>
+        `,
+        yAnchor: 0.5,
+        zIndex: 10
+    });
+
     document.getElementById("pathStepLabel").textContent =
         `${stepIndex + 1} / ${pathNodeIds.length - 1} 스텝`;
     document.getElementById("pathStepFrom").textContent =
-        `📍 #${fromNode.id} ${fromNode.name}`;
+        `📍 ${fromNode.name}`;
     document.getElementById("pathStepTo").textContent =
-        `→ #${toNode.id} ${toNode.name}`;
+        `→ ${toNode.name}`;
 
     const bearing = getBearing(fromNode.lat, fromNode.lng, toNode.lat, toNode.lng);
 
@@ -1011,7 +1065,7 @@ function showPathStep(stepIndex) {
 
     if (!fromNode.panorama_url) {
         dirImg.style.display = "none";
-        dirImg.src = "";          // ← src 명시적 초기화
+        dirImg.src = "";
         dirNotice.style.display = "";
         dirNotice.textContent = "📷 이 노드에는 사진이 없습니다.";
         dirCutImg = null;
@@ -1027,7 +1081,7 @@ function showPathStep(stepIndex) {
     function renderCut(img) {
         const dataUrl = extractDirectionCut(img, bearing);
         dirImg.src = dataUrl;
-        dirImg.style.display = "";   // ← 사진 있을 때 다시 표시
+        dirImg.style.display = "";
         dirNotice.style.display = "none";
         document.getElementById("dirArrow").textContent = bearingToArrow(bearing);
         document.getElementById("dirDegree").textContent =
@@ -1214,9 +1268,6 @@ function updatePanoBtn(id) {
 
 /* --------------------------------------------------
    6. 경로 찾기 완료 후 스텝 뷰어 초기화
-   graphManager2.js의 runPathTest() 안에서
-   경로 표시 완료 후 아래를 호출하세요:
-     initPathStepViewer();
 -------------------------------------------------- */
 function initPathStepViewer() {
     if (!pathNodeIds || pathNodeIds.length < 2) return;
@@ -1227,6 +1278,7 @@ function initPathStepViewer() {
 
 function clearPathStepViewer() {
     document.getElementById("dirPanel").style.display = "none";
+    if (currentStepOverlay) { currentStepOverlay.setMap(null); currentStepOverlay = null; }
     dirCutImg = null;
     dirCutUrl = null;
 }
