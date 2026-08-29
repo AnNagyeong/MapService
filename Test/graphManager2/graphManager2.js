@@ -32,6 +32,8 @@ const EDGE_COLORS = {
     elevator: "#9333ea", crosswalk: "#f97316"
 };
 
+const API_BASE = "http://localhost:8080";
+
 // ===== 인포윈도우 =====
 var infowindow = new kakao.maps.InfoWindow({ removable: false });
 var searchInfowindow = new kakao.maps.InfoWindow({ removable: true });
@@ -66,8 +68,8 @@ function haversine(lat1, lng1, lat2, lng2) {
 
 // ===== 데이터 로드 =====
 Promise.all([
-    fetch("http://localhost:3000/api/poi").then(r => r.json()),
-    fetch("http://localhost:3000/api/edge").then(r => r.json()),
+    fetch(`${API_BASE}/api/poi`).then(r => r.json()),
+    fetch(`${API_BASE}/api/edge`).then(r => r.json()),
 ])
     .then(([dbPoiData, dbEdgeData]) => {
         allPoi = dbPoiData.map(row => {
@@ -112,6 +114,8 @@ Promise.all([
         document.getElementById("totalEdge").innerText = edgeData.length;
     })
     .catch(err => console.error("데이터 로드 실패:", err));
+
+loadAccessibilityReports();
 
 /* =============================================
    NODE
@@ -426,6 +430,80 @@ function setValidationResult(msg, level) {
     const el = document.getElementById("validationResult");
     el.className = level ? `v-${level}` : "";
     el.innerText = msg;
+}
+
+async function loadAccessibilityReports() {
+    const container = document.getElementById("accessibilityReportList");
+    if (!container) return;
+
+    container.textContent = "제보를 불러오는 중입니다.";
+
+    try {
+        const response = await fetch(`${API_BASE}/api/accessibility-reports?status=PENDING`);
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+            throw new Error(data.error || "제보를 불러오지 못했습니다.");
+        }
+
+        if (!data.reports.length) {
+            container.innerHTML = '<div class="report-empty">확인할 제보가 없습니다.</div>';
+            return;
+        }
+
+        container.innerHTML = data.reports.map(renderAccessibilityReport).join("");
+    } catch (error) {
+        container.innerHTML = `<div class="report-empty">${escapeHtml(error.message)}</div>`;
+    }
+}
+
+function renderAccessibilityReport(report) {
+    const image = report.photoUrl
+        ? `<img class="report-photo" src="${API_BASE}${report.photoUrl}" alt="제보 사진">`
+        : "";
+
+    return `
+        <article class="report-card">
+            ${image}
+            <b>${escapeHtml(report.placeName || "장소 이름 없음")}</b>
+            <span>${escapeHtml(report.address || "주소 정보 없음")}</span>
+            <div class="report-meta">
+                <em>${escapeHtml(report.wheelchairAccessLabel)}</em>
+                <em>${escapeHtml(report.category || "기타")}</em>
+            </div>
+            <p>${escapeHtml(report.detail || "상세 설명 없음")}</p>
+            <div class="btn-row">
+                <button class="success" onclick="reviewAccessibilityReport('${report.id}', 'approve')">승인</button>
+                <button onclick="reviewAccessibilityReport('${report.id}', 'reject')">반려</button>
+            </div>
+        </article>
+    `;
+}
+
+async function reviewAccessibilityReport(id, action) {
+    try {
+        const response = await fetch(`${API_BASE}/api/accessibility-reports/${id}/${action}`, {
+            method: "POST"
+        });
+        const data = await response.json();
+
+        if (!response.ok || !data.ok) {
+            throw new Error(data.error || "처리에 실패했습니다.");
+        }
+
+        loadAccessibilityReports();
+    } catch (error) {
+        alert(error.message);
+    }
+}
+
+function escapeHtml(value) {
+    return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
 }
 
 function checkIsolated() {

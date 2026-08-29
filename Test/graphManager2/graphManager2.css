@@ -164,6 +164,64 @@ select {
     margin-top: 6px;
 }
 
+.report-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 260px;
+    overflow-y: auto;
+}
+
+.report-card {
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 8px;
+    background: #fff;
+    font-size: 11px;
+}
+
+.report-card b,
+.report-card span,
+.report-card p {
+    display: block;
+    margin-bottom: 5px;
+}
+
+.report-card p {
+    color: #555;
+    line-height: 1.5;
+}
+
+.report-photo {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    object-fit: cover;
+    border-radius: 3px;
+    margin-bottom: 6px;
+}
+
+.report-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+
+.report-meta em {
+    padding: 3px 6px;
+    border-radius: 999px;
+    background: #eef7ee;
+    color: #060;
+    font-style: normal;
+    font-weight: bold;
+}
+
+.report-empty {
+    color: #777;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
 .v-ok {
     color: #060;
 }
