@@ -7,58 +7,114 @@
 ## 📌 1. 시스템 아키텍처 다이어그램
 
 ```mermaid
-    graph TD
-        subgraph "1. 데이터 수집 계층 (Collection)"
-            S1[Arduino + MPU6050 센서] -->|경사/진동 데이터| B
-            S2[카메라/AI Vision] -->|장애물 인식 데이터| B
-            S3[사용자 앱 리포트] -->|실시간 제보 사진/텍스트| B
-            S4[공공 데이터 API] -->|엘리베이터/화장실 정보| B
-        end
+ flowchart LR
+    classDef user fill:#ffe4e6,stroke:#e11d48,stroke-width:2px,color:#000
+    classDef source fill:#fef3c7,stroke:#d97706,stroke-width:2px,color:#000
+    classDef api fill:#ecfdf5,stroke:#059669,stroke-width:2px,color:#000
+    classDef core fill:#eff6ff,stroke:#2563eb,stroke-width:2px,color:#000
+    classDef db fill:#f3e8ff,stroke:#7c3aed,stroke-width:2px,color:#000
 
-        subgraph "2. 데이터 처리 및 관리 계층 (Processing & Storage)"
-            B[Backend API 서버]
-            B -->|정제/매핑| DB1[(MySQL - RDB)]
-            B -->|그래프 변환| DB2[(Neo4j - Graph DB)]
-            
-            DB1 ---|POI 속성 정보| DB2
-            DB2 ---|최적 경로 연산| B
-        end
+    subgraph Layer1["Layer 1: 단말기 (Client & IoT)"]
+        direction TB
+        AppUser(" 교통약자 앱 (Flutter)<br/>[자체 GPS 파악]"):::user
+        AppReport(" 제보 앱 (Flutter)"):::source
+        Sensor(" IoT 센서 (Arduino)"):::source
+    end
 
-        subgraph "3. 서비스 계층 (Service/UI)"
-            B -->|REST API Response| F[Frontend - Web/App]
-            F -->|Kakao Maps API| Map[지도 시각화 및 경로 표시]
-        end
+    subgraph Layer2["Layer 2: 게이트웨이"]
+        APIGW{"API Controller<br/>(Spring Boot)"}:::api
+    end
 
-        %% 데이터 흐름 정의
-        F -->|출발/도착 POI 요청| B
-        B -->|Dijkstra/A* 알고리즘| DB2
-        DB2 -->|노드-링크 좌표 리스트| B
+    subgraph Layer3["Layer 3: 코어 비즈니스 로직 (Spring Boot)"]
+        direction TB
+        DataClean(" 제보 데이터 정제"):::core
+        LocResolver(" 위치 POI 정제"):::core
+        WeightCalc(" 가중치 연산 엔진"):::core
+        PathEngine(" A* 탐색 엔진"):::core
+        PhotoMatch(" 사진/엣지 매칭"):::core
+    end
+
+    subgraph Layer4["Layer 4: 공유 데이터베이스"]
+        direction TB
+        MySQL[(" MySQL (AWS RDS)<br/>[트랜잭션 마스터]")]:::db
+        Sync((" 데이터 동기화<br/>[Spring Event]")):::db
+        Neo4j[(" Neo4j<br/>[그래프 탐색용]")]:::db
+    end
+
+    %% 수집 흐름 (점선)
+    AppReport -. "REST API" .-> APIGW
+    Sensor -. "MQTT" .-> APIGW
+    APIGW -. "원시 데이터" .-> DataClean
+    DataClean -. "정형화 완료" .-> LocResolver
+    LocResolver -. "GPS 보정" .-> WeightCalc
+    WeightCalc -. "JPA 저장" .-> MySQL
+    MySQL -. "가중치 추출" .-> Sync
+    Sync -. "Cypher 갱신" .-> Neo4j
+
+    %% 서비스 흐름 (실선)
+    AppUser == "① 길찾기 요청 (REST)" ==> APIGW
+    APIGW == "② 탐색 호출" ==> PathEngine
+    PathEngine == "③ 그래프 쿼리" ==> Neo4j
+    Neo4j -- "④ 최적 경로 반환" --> PathEngine
+    PathEngine -- "⑤ 구간 전달" --> PhotoMatch
+    PhotoMatch -- "⑥ 사진 조회" --> MySQL
+    MySQL -- "⑦ URL 반환" --> PhotoMatch
+    PhotoMatch == "⑧ 통합 DTO 조합" ==> APIGW
+    APIGW == "⑨ 최종 경로 응답" ==> AppUser
+
+
 ```
 
 ---
 
-## 📌 2. 모듈별 상세 설명 및 데이터 입출력
+## 📌 2. 시스템 모듈별 상세 설명 및 데이터 입출력(I/O) 명세
 
-| 모듈명 | 주요 기능 및 역할 | Input | Output |
-| :--- | :--- | :--- | :--- |
-| **데이터 수집** | 하드웨어 센서 및 외부 API를 통한 원천 데이터 확보 | 경사도, 장애물 이미지, 공공 시설물 좌표 | 가공 전 원천 데이터(Raw Data) |
-| **데이터 처리** | 원시 데이터 정제 및 AI 기반 분석(YOLOv8 등) 수행 | 실시간 ㅣ노면 정보, 제보 사진 | 노력 등급(Effort Level), 정제된 POI 속성 |
-| **하이브리드 DB** | 데이터 무결성 관리(MySQL) 및 경로 탐색 최적화(Neo4j) | POI 정보, 경로 연결(Edge) 가중치 정보 | 경로 위상 구조(Topology), 상세 시설 정보 |
-| **경로 탐색 엔진** | 가중치 기반 최적 경로(Dijkstra/A*) 산출 | 출발/도착지 POI ID, 사용자 유형 필터 | 최적 경로 좌표 리스트 (JSON) |
-| **시각화** | Kakao Maps API를 통한 지도 및 경로 렌더링 | 경로 좌표, POI 마커 정보, 사진 URL | 사용자 화면 내 지도 및 경로 정보 |
+교통약자 맞춤형 배리어 프리 맵 서비스의 각 모듈별 핵심 역할과 데이터의 입력(Input) 및 출력(Output) 흐름은 다음과 같습니다. 데이터의 수집 경로와 서비스 제공 경로를 명확히 분리하여 아키텍처의 직관성을 높였습니다.
+
+| 레이어 (Layer) | 모듈명 | 핵심 역할 (Description) | 입력 데이터 (Input) | 출력 데이터 (Output) |
+| :--- | :--- | :--- | :--- | :--- |
+| **Layer 1.<br>사용자/소스** | **교통약자 앱** | 길찾기 요청 및 경로 안내 UI 제공 | 출발지/도착지 좌표, 사용자 유형(휠체어 등) | 최적 경로 노드 리스트, 매칭된 장애물/노면 사진 |
+| | **시민 제보 앱** | 도로 상태 및 장애물 크라우드소싱 | 사진, 위치 좌표(GPS), 텍스트 설명 | 제보 성공 응답 (200 OK) |
+| | **IoT 센서** | 아두이노 기반 노면 진동/경사도 수집 | 하드웨어 센서 측정값 | 원시 센서 데이터 스트림 (JSON/MQTT) |
+| **Layer 2.<br>게이트웨이** | **API Controller** | 들어오는 모든 요청을 적절한 모듈로 라우팅 | REST/MQTT 기반의 모든 Client 요청 | 분배된 내부 호출 (내부 시스템 규격) |
+| | **위치 정제 모듈** | 오차가 있는 GPS 좌표를 가장 가까운 노드(POI)로 보정 | 원시 GPS 좌표 (위도/경도) | 정제된 POI 노드 ID |
+| **Layer 3.<br>핵심 로직** | **가중치 연산 엔진** | 센서/제보 데이터를 분석하여 특정 도로 구간의 위험도 산출 | 진동/경사도 수치, 제보 데이터 | 도로 엣지(Edge)별 업데이트용 가중치 값 |
+| | **A * 탐색 엔진** | 교통약자 제약조건과 가중치가 반영된 최단/최적 경로 계산 | 출발지/도착지 노드 ID, 휠체어 등급 | 가중치 기반 최적 경로 (순차적 엣지 리스트) |
+| | **사진/엣지 매칭** | 탐색된 경로 위에 존재하는 현장 사진을 결합 | 계산 완료된 경로 엣지 리스트 | 경로 + 사진 URL이 매핑된 최종 렌더링 데이터 |
+| **Layer 4.<br>공유 DB** | **MySQL (Master)** | 회원 정보, 제보 원본 로그, 시스템 트랜잭션 등 정형 데이터 저장 | 회원가입 정보, 제보 원본 데이터 | 조회된 정형 데이터 및 사진 URL |
+| | **데이터 동기화(Sync)** | MySQL에 적재된 위험도 데이터를 Neo4j 그래프에 실시간 반영 | MySQL의 업데이트 이벤트 | Neo4j 쿼리 (Cypher) |
+| | **Neo4j (Graph)** | 공간 네트워크(노드/엣지) 및 동적 가중치 저장, 경로 탐색 제공 | 엣지 가중치 업데이트 요청, 탐색 쿼리 | A\* 알고리즘 연산 결과 (최적 경로 맵) |
 
 --- 
 
-## 📌 3. 모듈 구현 기술 요약 (Tech Stack)
+## 📌 3. 시스템 모듈별 구현 기술 요약 (Tech Stack)
 
-- __IoT & 센서__ : Arduino, MPU6050(가속도/자이로)를 활용하여 노면의 경사도와 진동 데이터를 실시간 수집합니다. 
+본 프로젝트의 안정적인 운영과 실시간 경로 연산 효율성을 극대화하기 위해 채택한 기술 스택 명세입니다.
 
-- __AI 모델__ : YOLOv8(객체 인식) 및 CNN(노면 분류)을 적용하여 계단, 높은 턱, 보도 파손 등을 자동 감지합니다.
+#### ① Frontend & Client
+* **Flutter (Dart)** / **Web HTML5**
+  * **적용 대상:** 교통약자용 메인 앱, 시민 참여형 제보 앱 및 웹 인터페이스
+  * **도입 목적:** iOS와 Android 환경에서 단일 코드베이스로 빠른 크로스 플랫폼 UI를 구현하고, 지도 SDK와의 유연한 연동을 달성하기 위함
 
-- __데이터베이스__ 
-    - MySQL: POI 메타데이터(이름, 유형, 사진), 사용자 정보, 시설물 상세 정보를 저장하여 데이터 무결성을 보장합니다. 
-    - Neo4j: POI를 노드로, 연결 경로를 엣지로 매핑하여 방향성이 있는 그래프 구조를 형성하고 복잡한 경로 연산을 수행합니다. 
+#### ② Backend & Core Logic
+* **Spring Boot (Java)** / **FastAPI (Python)**
+  * **적용 대상:** API 게이트웨이(Controller), 가중치 연산 엔진, A\* 경로 탐색기
+  * **도입 목적:** 대규모 요청 분산 처리 및 트랜잭션 안정성을 위해 메인 백엔드는 Spring Boot를 활용하고, 가볍고 빠른 이미지/데이터 전처리 모듈에는 FastAPI를 교차 배치하여 효율성 증대
 
-- 알고리즘: A* 및 Dijkstra 알고리즘을 사용하며, 단순 거리뿐만 아니라 '오르막/내리막 가중치'를 포함한 비용 함수를 적용합니다. 
+#### ③ IoT & Edge Data Ingestion
+* **Arduino (C++)** / **MQTT Protocol**
+  * **적용 대상:** 휠체어 부착 하드웨어 센서 킷 및 데이터 스트리밍 파이프라인
+  * **도입 목적:** 자이로 및 가속도 센서 제어와 실시간 노면 진동 데이터를 무선 네트워크 환경에서 초경량·저전력(MQTT)으로 유실 없이 전송하기 위함
 
-- 지도 API: Kakao Maps SDK를 사용하여 POI 타입별 커스텀 마커와 경로 Polyline을 출력합니다. 
+#### ④ Database & Storage (Hybrid Topology)
+* **MySQL 8.0**
+  * **적용 대상:** 마스터 관계형 데이터베이스
+  * **도입 목적:** 유저 계정, 권한 관리, 제보 원본 로그 등 무결성과 정형 트랜잭션(ACID) 보장이 필수적인 데이터 관리
+* **Neo4j (Graph Database)**
+  * **적용 대상:** 공간 인프라 네트워크 데이터베이스
+  * **도입 목적:** 교차로(Node)와 인도 구간(Edge) 사이의 복잡한 연결 관계 속에서, 실시간 변동 가중치를 반영한 고속 최적 경로 탐색(Pathfinding) 연산 성능을 확보하기 위함
+
+#### ⑤ Infra & Cloud Environment
+* **AWS (Amazon Web Services)**
+  * **적용 대상:** EC2, RDS 및 전체 시스템 서버 운영 환경
+  * **도입 목적:** 클라우드 기반 아키텍처 설계를 통해 가용성을 높이고 인프라 관리를 체계화하기 위함
