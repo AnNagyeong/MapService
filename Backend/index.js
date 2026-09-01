@@ -8,14 +8,21 @@ const fs = require('fs');
 const { v4: uuidv4 } = require('uuid');
 
 const app = express();
+const PORT = process.env.PORT || 8080;
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '8mb' }));
 app.use('/panoramas', express.static(path.join(__dirname, '../Test/panoramas')));
 app.use('/images', express.static(path.join(__dirname, '../Test/images')));
+app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
+app.use(express.static(path.join(__dirname, '..')));
 
 // panoramas 폴더가 없으면 자동 생성
 const panoramasDir = path.join(__dirname, '../Test/panoramas');
 if (!fs.existsSync(panoramasDir)) fs.mkdirSync(panoramasDir, { recursive: true });
+const accessibilityUploadDir = path.join(__dirname, '../uploads/accessibility-reports');
+if (!fs.existsSync(accessibilityUploadDir)) {
+    fs.mkdirSync(accessibilityUploadDir, { recursive: true });
+}
 
 // ── multer 설정 (파노라마 사진 업로드) ──────────────────────────────────────
 const storage = multer.diskStorage({
@@ -48,6 +55,65 @@ async function withDB(fn) {
         return await fn(conn);
     } finally {
         await conn.end();
+    }
+}
+
+async function ensureAccessibilityTables() {
+    await withDB(async (conn) => {
+        await conn.execute(`
+            CREATE TABLE IF NOT EXISTS user_report (
+                report_id VARCHAR(36) PRIMARY KEY,
+                user_id VARCHAR(50) NULL,
+                poi_id VARCHAR(36) NULL,
+                place_name VARCHAR(100) NULL,
+                place_address VARCHAR(255) NULL,
+                latitude DECIMAL(10, 8) NOT NULL,
+                longitude DECIMAL(11, 8) NOT NULL,
+                category VARCHAR(50) NULL,
+                wheelchair_access_status ENUM('UNKNOWN', 'ACCESSIBLE', 'NOT_ACCESSIBLE') DEFAULT 'UNKNOWN',
+                description TEXT NULL,
+                photo_url VARCHAR(255) NULL,
+                status VARCHAR(20) DEFAULT 'PENDING',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                reviewed_at TIMESTAMP NULL
+            )
+        `);
+
+        await ensureColumn(conn, 'user_report', 'place_name',
+            "ADD COLUMN place_name VARCHAR(100) NULL AFTER poi_id");
+        await ensureColumn(conn, 'user_report', 'place_address',
+            "ADD COLUMN place_address VARCHAR(255) NULL AFTER place_name");
+        await ensureColumn(conn, 'user_report', 'wheelchair_access_status',
+            "ADD COLUMN wheelchair_access_status ENUM('UNKNOWN', 'ACCESSIBLE', 'NOT_ACCESSIBLE') DEFAULT 'UNKNOWN' AFTER category");
+        await ensureColumn(conn, 'user_report', 'reviewed_at',
+            "ADD COLUMN reviewed_at TIMESTAMP NULL AFTER created_at");
+
+        await conn.execute(`
+            CREATE TABLE IF NOT EXISTS place_accessibility (
+                place_accessibility_id VARCHAR(36) PRIMARY KEY,
+                poi_id VARCHAR(36) NULL,
+                place_name VARCHAR(100) NOT NULL,
+                place_address VARCHAR(255) NULL,
+                latitude DECIMAL(10, 8) NULL,
+                longitude DECIMAL(11, 8) NULL,
+                wheelchair_access_status ENUM('UNKNOWN', 'ACCESSIBLE', 'NOT_ACCESSIBLE') DEFAULT 'UNKNOWN',
+                source_report_id VARCHAR(36) NULL,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+            )
+        `);
+    });
+}
+
+async function ensureColumn(conn, tableName, columnName, alterSql) {
+    const [rows] = await conn.execute(
+        `SELECT COLUMN_NAME
+         FROM INFORMATION_SCHEMA.COLUMNS
+         WHERE TABLE_SCHEMA = ? AND TABLE_NAME = ? AND COLUMN_NAME = ?`,
+        [dbConfig.database, tableName, columnName]
+    );
+
+    if (!rows.length) {
+        await conn.execute(`ALTER TABLE ${tableName} ${alterSql}`);
     }
 }
 
@@ -335,6 +401,309 @@ app.delete('/api/building-entrance', async (req, res) => {
 });
 
 /* =============================================
+   휠체어 진입 제보
+   ============================================= */
+app.post('/api/accessibility-reports', async (req, res) => {
+    const placeName = String(req.body.placeName || req.body.name || '').trim();
+    const placeAddress = String(req.body.address || '').trim();
+    const latitude = Number(req.body.y ?? req.body.lat);
+    const longitude = Number(req.body.x ?? req.body.lng);
+
+    if (!placeName || Number.isNaN(latitude) || Number.isNaN(longitude)) {
+        return res.status(400).json({
+            ok: false,
+            error: 'placeName, y, x 값이 필요합니다.'
+        });
+    }
+
+    try {
+        const reportId = req.body.id || uuidv4();
+        const wheelchairStatus = toDbWheelchairStatus(req.body.wheelchairAccess);
+        const photoUrl = saveAccessibilityReportImage(reportId, req.body.imageData);
+
+        await withDB(async (conn) => {
+            await conn.execute(
+                `INSERT INTO user_report
+                    (report_id, user_id, poi_id, place_name, place_address,
+                     latitude, longitude, category, wheelchair_access_status,
+                     description, photo_url, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'PENDING')`,
+                [
+                    reportId,
+                    req.body.userId || null,
+                    req.body.poiId || null,
+                    placeName,
+                    placeAddress || null,
+                    latitude,
+                    longitude,
+                    req.body.type || req.body.category || null,
+                    wheelchairStatus,
+                    req.body.detail || req.body.description || null,
+                    photoUrl
+                ]
+            );
+        });
+
+        res.status(201).json({
+            ok: true,
+            report: {
+                id: reportId,
+                placeName,
+                address: placeAddress,
+                wheelchairAccess: toApiWheelchairStatus(wheelchairStatus),
+                status: 'pending',
+                photoUrl
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.get('/api/accessibility-reports', async (req, res) => {
+    const status = String(req.query.status || 'PENDING').toUpperCase();
+
+    try {
+        await withDB(async (conn) => {
+            const [rows] = await conn.execute(
+                `SELECT report_id, place_name, place_address, latitude, longitude,
+                        category, wheelchair_access_status, description, photo_url,
+                        status, created_at, reviewed_at
+                 FROM user_report
+                 WHERE status = ?
+                 ORDER BY created_at DESC`,
+                [status]
+            );
+
+            res.json({
+                ok: true,
+                reports: rows.map(formatAccessibilityReport)
+            });
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+app.post('/api/accessibility-reports/:id/approve', async (req, res) => {
+    await reviewAccessibilityReport(req, res, 'APPROVED');
+});
+
+app.post('/api/accessibility-reports/:id/reject', async (req, res) => {
+    await reviewAccessibilityReport(req, res, 'REJECTED');
+});
+
+app.get('/api/place-accessibility', async (req, res) => {
+    const placeName = String(req.query.name || req.query.placeName || '').trim();
+    const placeAddress = String(req.query.address || '').trim();
+    const latitude = Number(req.query.lat ?? req.query.y);
+    const longitude = Number(req.query.lng ?? req.query.x);
+
+    if (!placeName && (Number.isNaN(latitude) || Number.isNaN(longitude))) {
+        return res.status(400).json({
+            ok: false,
+            error: 'name 또는 좌표가 필요합니다.'
+        });
+    }
+
+    try {
+        await withDB(async (conn) => {
+            let rows = [];
+
+            if (placeName) {
+                [rows] = await conn.execute(
+                    `SELECT place_accessibility_id, place_name, place_address,
+                            latitude, longitude, wheelchair_access_status,
+                            source_report_id, updated_at
+                     FROM place_accessibility
+                     WHERE LOWER(place_name) = LOWER(?)
+                       AND (? = '' OR COALESCE(place_address, '') = ?)
+                     ORDER BY updated_at DESC
+                     LIMIT 1`,
+                    [placeName, placeAddress, placeAddress]
+                );
+            }
+
+            if (!rows.length && !Number.isNaN(latitude) && !Number.isNaN(longitude)) {
+                [rows] = await conn.execute(
+                    `SELECT place_accessibility_id, place_name, place_address,
+                            latitude, longitude, wheelchair_access_status,
+                            source_report_id, updated_at,
+                            (6371000 * ACOS(
+                                COS(RADIANS(?)) * COS(RADIANS(latitude)) *
+                                COS(RADIANS(longitude) - RADIANS(?)) +
+                                SIN(RADIANS(?)) * SIN(RADIANS(latitude))
+                            )) AS distance
+                     FROM place_accessibility
+                     HAVING distance <= 50
+                     ORDER BY distance ASC, updated_at DESC
+                     LIMIT 1`,
+                    [latitude, longitude, latitude]
+                );
+            }
+
+            const record = rows[0] || null;
+            const status = toApiWheelchairStatus(record?.wheelchair_access_status);
+
+            res.json({
+                ok: true,
+                status,
+                label: accessibilityLabel(status),
+                verified: Boolean(record),
+                record: record ? formatPlaceAccessibility(record) : null
+            });
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+});
+
+async function reviewAccessibilityReport(req, res, nextStatus) {
+    try {
+        await withDB(async (conn) => {
+            await conn.beginTransaction();
+
+            try {
+                const [reports] = await conn.execute(
+                    `SELECT report_id, poi_id, place_name, place_address,
+                            latitude, longitude, wheelchair_access_status
+                     FROM user_report
+                     WHERE report_id = ?
+                     LIMIT 1`,
+                    [req.params.id]
+                );
+
+                const report = reports[0];
+                if (!report) {
+                    await conn.rollback();
+                    return res.status(404).json({ ok: false, error: '제보를 찾을 수 없습니다.' });
+                }
+
+                await conn.execute(
+                    `UPDATE user_report
+                     SET status = ?, reviewed_at = CURRENT_TIMESTAMP
+                     WHERE report_id = ?`,
+                    [nextStatus, req.params.id]
+                );
+
+                if (nextStatus === 'APPROVED') {
+                    await conn.execute(
+                        `DELETE FROM place_accessibility
+                         WHERE LOWER(place_name) = LOWER(?)
+                           AND COALESCE(place_address, '') = COALESCE(?, '')`,
+                        [report.place_name, report.place_address]
+                    );
+
+                    await conn.execute(
+                        `INSERT INTO place_accessibility
+                            (place_accessibility_id, poi_id, place_name, place_address,
+                             latitude, longitude, wheelchair_access_status, source_report_id)
+                         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            uuidv4(),
+                            report.poi_id,
+                            report.place_name,
+                            report.place_address,
+                            report.latitude,
+                            report.longitude,
+                            report.wheelchair_access_status,
+                            report.report_id
+                        ]
+                    );
+                }
+
+                await conn.commit();
+
+                res.json({
+                    ok: true,
+                    report: {
+                        id: report.report_id,
+                        status: nextStatus.toLowerCase()
+                    }
+                });
+            } catch (err) {
+                await conn.rollback();
+                throw err;
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ ok: false, error: err.message });
+    }
+}
+
+function saveAccessibilityReportImage(reportId, imageData) {
+    if (typeof imageData !== 'string' || !imageData.startsWith('data:image/')) {
+        return null;
+    }
+
+    const match = imageData.match(/^data:image\/(png|jpe?g|webp);base64,(.+)$/i);
+    if (!match) return null;
+
+    const extension = match[1].toLowerCase().replace('jpeg', 'jpg');
+    const fileName = `${reportId}.${extension}`;
+    const filePath = path.join(accessibilityUploadDir, fileName);
+
+    fs.writeFileSync(filePath, Buffer.from(match[2], 'base64'));
+    return `/uploads/accessibility-reports/${fileName}`;
+}
+
+function toDbWheelchairStatus(status) {
+    const value = String(status || '').trim().toLowerCase();
+    if (value === 'accessible') return 'ACCESSIBLE';
+    if (value === 'not_accessible') return 'NOT_ACCESSIBLE';
+    return 'UNKNOWN';
+}
+
+function toApiWheelchairStatus(status) {
+    const value = String(status || '').trim().toUpperCase();
+    if (value === 'ACCESSIBLE') return 'accessible';
+    if (value === 'NOT_ACCESSIBLE') return 'not_accessible';
+    return 'unknown';
+}
+
+function accessibilityLabel(status) {
+    if (status === 'accessible') return '휠체어 진입 가능';
+    if (status === 'not_accessible') return '휠체어 진입 어려움';
+    return '휠체어 진입 정보 확인 필요';
+}
+
+function formatAccessibilityReport(report) {
+    const status = toApiWheelchairStatus(report.wheelchair_access_status);
+
+    return {
+        id: report.report_id,
+        placeName: report.place_name,
+        address: report.place_address,
+        lat: parseFloat(report.latitude),
+        lng: parseFloat(report.longitude),
+        category: report.category,
+        wheelchairAccess: status,
+        wheelchairAccessLabel: accessibilityLabel(status),
+        detail: report.description,
+        photoUrl: report.photo_url,
+        status: String(report.status || '').toLowerCase(),
+        createdAt: report.created_at,
+        reviewedAt: report.reviewed_at
+    };
+}
+
+function formatPlaceAccessibility(record) {
+    const status = toApiWheelchairStatus(record.wheelchair_access_status);
+
+    return {
+        id: record.place_accessibility_id,
+        placeName: record.place_name,
+        address: record.place_address,
+        lat: record.latitude === null ? null : parseFloat(record.latitude),
+        lng: record.longitude === null ? null : parseFloat(record.longitude),
+        status,
+        label: accessibilityLabel(status),
+        sourceReportId: record.source_report_id,
+        updatedAt: record.updated_at
+    };
+}
+
+/* =============================================
    에러 핸들러 (multer 등)
    ============================================= */
 app.use((err, req, res, next) => {
@@ -350,4 +719,11 @@ app.get('/admin', (req, res) => {
     res.send(html);
 });
 
-app.listen(3000, () => console.log('백엔드가 3000번 포트에서 실행 중입니다!'));
+ensureAccessibilityTables()
+    .then(() => {
+        app.listen(PORT, () => console.log(`백엔드가 ${PORT}번 포트에서 실행 중입니다!`));
+    })
+    .catch((err) => {
+        console.error('접근성 제보 테이블 준비 실패:', err.message);
+        process.exit(1);
+    });

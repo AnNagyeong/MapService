@@ -50,14 +50,33 @@ CREATE TABLE user_report (
     user_id VARCHAR(50),   
     -- 사용자 제보 위치          
     poi_id VARCHAR(36),                 -- 특정 POI 위라면 참조하고, 아니면 NULL 허용
+    place_name VARCHAR(100),            -- 외부 장소 API에서 선택한 장소명
+    place_address VARCHAR(255),         -- 외부 장소 API에서 선택한 주소
     latitude DECIMAL(10, 8) NOT NULL,   -- 실제 제보 위치의 GPS를 직접 저장 (필수, POI 근처가 아닌 곳에서도 정확한 위치 전달하지 위함)
     longitude DECIMAL(11, 8) NOT NULL,  -- 실제 제보 위치의 GPS를 직접 저장 (필수, POI 근처가 아닌 곳에서도 정확한 위치 전달하지 위함)
     category VARCHAR(50),           -- 불법주차, 단차, 공사 등
+    wheelchair_access_status ENUM('UNKNOWN', 'ACCESSIBLE', 'NOT_ACCESSIBLE') DEFAULT 'UNKNOWN',
     description TEXT,
     photo_url VARCHAR(255),
     status VARCHAR(20) DEFAULT 'PENDING',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    reviewed_at TIMESTAMP NULL,
     FOREIGN KEY (user_id) REFERENCES user(user_id)
+);
+
+-- 📌 5-1. PLACE_ACCESSIBILITY (관리자 승인 후 장소별 휠체어 진입 정보)
+CREATE TABLE place_accessibility (
+    place_accessibility_id VARCHAR(36) PRIMARY KEY,
+    poi_id VARCHAR(36) NULL,
+    place_name VARCHAR(100) NOT NULL,
+    place_address VARCHAR(255),
+    latitude DECIMAL(10, 8),
+    longitude DECIMAL(11, 8),
+    wheelchair_access_status ENUM('UNKNOWN', 'ACCESSIBLE', 'NOT_ACCESSIBLE') DEFAULT 'UNKNOWN',
+    source_report_id VARCHAR(36),
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (poi_id) REFERENCES poi(poi_id),
+    FOREIGN KEY (source_report_id) REFERENCES user_report(report_id)
 );
 
 -- 📌 6. EMERGENCY_MATCH (긴급 매칭)
