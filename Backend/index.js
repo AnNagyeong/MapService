@@ -1,3 +1,10 @@
+const {
+    panoramasDir,
+    getPanoramaFilename,
+    getLocalPanoramaPath,
+    getLocalPanoramaUrl
+} = require('./storage');
+
 require('dotenv').config();
 const express = require('express');
 const mysql = require('mysql2/promise');
@@ -17,8 +24,6 @@ app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use(express.static(path.join(__dirname, '..')));
 
 // panoramas 폴더가 없으면 자동 생성
-const panoramasDir = path.join(__dirname, '../Test/panoramas');
-if (!fs.existsSync(panoramasDir)) fs.mkdirSync(panoramasDir, { recursive: true });
 const accessibilityUploadDir = path.join(__dirname, '../uploads/accessibility-reports');
 if (!fs.existsSync(accessibilityUploadDir)) {
     fs.mkdirSync(accessibilityUploadDir, { recursive: true });

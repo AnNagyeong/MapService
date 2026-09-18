@@ -9,7 +9,7 @@
   <div id="map" style="width:100%;height:400px;"></div>
 
   <!-- 카카오 지도 SDK 불러오기 -->
-  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=발급받은 API Key 이곳에 입력&autoload=false"></script>
+  <script src="https://dapi.kakao.com/v2/maps/sdk.js?appkey=80e48dd01aae3f043d16e5ad41071f5d"></script>
   <script>
     // 지도 표시할 div와 옵션 설정
     kakao.maps.load(function () {
