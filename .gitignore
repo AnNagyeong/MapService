@@ -1,11 +1,25 @@
-#1. Node.js 필수 제외 항목 (보안 및 용량)
+# Dependencies
 node_modules/
-.env
+.npm-cache/
 
-#2. 운영체제 및 IDE 관련 파일
+# Environment files and secrets
+.env
+.env.*
+!.env.example
+
+# Private keys / certificates
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+*.keystore
+
+# Runtime data
+data/
+*.log
+
+# OS / IDE
 .vscode/
 .DS_Store
 Thumbs.db
-
-#3. 로그 및 빌드 결과
-*.log
