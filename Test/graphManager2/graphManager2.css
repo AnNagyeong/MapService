@@ -635,3 +635,9 @@ details>summary {
 details>summary::-webkit-details-marker {
     color: #94a3b8;
 }
+
+
+.autocomplete-fixed {
+    position: fixed;
+    z-index: 9999;
+}

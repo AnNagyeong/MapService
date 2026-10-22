@@ -146,7 +146,7 @@
                 </div>
                 <button id="coordClickBtn" onclick="toggleCoordClickMode()" style="width:100%;padding:7px;font-size:12px;border:1.5px dashed #94a3b8;
                         background:#f8fafc;border-radius:6px;cursor:pointer;margin-bottom:6px;">
-                    📌 지도 클릭으로 출발 좌표 입력
+                    지도 클릭으로 출발 좌표 입력
                 </button>
                 <div style="font-size:11px;color:#888;margin-bottom:4px;">
                     → 가장 가까운 노드: <b id="nearestNodeLabel">미입력</b>
@@ -263,7 +263,7 @@
         <!-- 헤더 -->
         <div style="background:#1e40af;color:#fff;padding:14px 16px;
               display:flex;align-items:center;justify-content:space-between;flex-shrink:0;">
-            <span style="font-size:15px;font-weight:700;">🗂 관리자 CRUD 패널</span>
+            <span style="font-size:15px;font-weight:700;">관리자 CRUD 패널</span>
             <button onclick="toggleAdminPanel()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;
                    line-height:1;">✕</button>
         </div>
@@ -271,13 +271,13 @@
         <!-- 탭 버튼 -->
         <div style="display:flex;border-bottom:2px solid #e2e8f0;flex-shrink:0;">
             <button class="admin-tab-btn active" data-tab="poi" onclick="switchAdminTab('poi')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
-                   background:none;cursor:pointer;">📍 노드</button>
+                   background:none;cursor:pointer;">노드</button>
             <button class="admin-tab-btn" data-tab="photo" onclick="switchAdminTab('photo')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
-                   background:none;cursor:pointer;">📷 사진</button>
+                   background:none;cursor:pointer;">사진</button>
             <button class="admin-tab-btn" data-tab="edge" onclick="switchAdminTab('edge')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
-                   background:none;cursor:pointer;">🔗 엣지</button>
+                   background:none;cursor:pointer;">엣지</button>
             <button class="admin-tab-btn" data-tab="entrance" onclick="switchAdminTab('entrance')" style="flex:1;padding:10px 4px;font-size:12px;font-weight:600;border:none;
-                   background:none;cursor:pointer;">🏢 입구</button>
+                   background:none;cursor:pointer;">입구</button>
         </div>
 
         <!-- 스크롤 영역 -->
@@ -289,12 +289,12 @@
                 <!-- 노드 추가 -->
                 <details open>
                     <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#1e40af;">
-                        ➕ 노드 추가
+                         노드 추가
                     </summary>
                     <div style="display:grid;gap:8px;">
                         <div>
                             <label class="alabel">이름</label>
-                            <input id="addPoiName" class="ainput" placeholder="예) 공학관 정문 경사로">
+                            <input id="addPoiName" class="ainput" placeholder="예) 본관 정문 경사로">
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div>
@@ -311,7 +311,7 @@
                         <div>
                             <button id="mapClickBtn" onclick="toggleMapClickMode()" style="width:100%;padding:7px;font-size:12px;border:1.5px dashed #94a3b8;
                            background:#f8fafc;border-radius:6px;cursor:pointer;">
-                                📌 지도 클릭으로 좌표 입력
+                                지도 클릭으로 좌표 입력
                             </button>
                         </div>
                         <div>
@@ -335,7 +335,7 @@
                 <!-- 노드 수정 -->
                 <details>
                     <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#0369a1;">
-                        ✏️ 노드 수정
+                        노드 수정
                     </summary>
                     <div style="display:grid;gap:8px;">
                         <div style="position:relative;">
@@ -344,7 +344,7 @@
                             <ul id="editPoiIdList" class="autocomplete-list"></ul>
                         </div>
                         <button class="abtn-secondary" onclick="fillEditForm()" style="font-size:12px;">
-                            🔍 정보 불러오기
+                            정보 불러오기
                         </button>
                         <div>
                             <label class="alabel">이름</label>
@@ -381,7 +381,7 @@
                 <!-- 노드 삭제 -->
                 <details>
                     <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#b91c1c;">
-                        🗑 노드 삭제
+                        노드 삭제
                     </summary>
                     <p style="font-size:11px;color:#ef4444;margin:0 0 8px;">
                         ⚠️ 삭제 시 연결된 모든 엣지·입구 관계도 함께 삭제됩니다.
@@ -421,11 +421,11 @@
                         <p style="font-size:11px;color:#64748b;margin:4px 0 0;">업로드 중...</p>
                     </div>
 
-                    <button class="abtn-primary" onclick="adminUploadPhoto()">📤 사진 업로드</button>
+                    <button class="abtn-primary" onclick="adminUploadPhoto()">사진 업로드</button>
 
                     <hr class="adivider" style="margin:4px 0;">
                     <p style="font-size:11px;color:#64748b;margin:0;">기존 사진을 서버에서 완전히 삭제합니다.</p>
-                    <button class="abtn-danger" onclick="adminDeletePhoto()">🗑 사진 삭제</button>
+                    <button class="abtn-danger" onclick="adminDeletePhoto()">사진 삭제</button>
                 </div>
             </div>
 
@@ -435,20 +435,20 @@
                 <!-- 엣지 추가 -->
                 <details open>
                     <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#1e40af;">
-                        ➕ 엣지 추가
+                        엣지 추가
                     </summary>
                     <div style="display:grid;gap:8px;">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div>
                                 <label class="alabel">출발 노드 이름</label>
                                 <input id="addEdgeFrom" class="ainput" placeholder="노드 이름으로 검색">
-                                <ul id="addEdgeFromList" class="autocomplete-list"></ul>
+                                <ul id="addEdgeFromList" class="autocomplete-list autocomplete-fixed"></ul>
 
                             </div>
                             <div>
                                 <label class="alabel">도착 노드 이름</label>
                                 <input id="addEdgeTo" class="ainput" placeholder="노드 이름으로 검색">
-                                <ul id="addEdgeToList" class="autocomplete-list"></ul>
+                                <ul id="addEdgeToList" class="autocomplete-list autocomplete-fixed"></ul>
                             </div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:end;">
@@ -458,7 +458,7 @@
                             </div>
                             <button class="abtn-secondary" onclick="calcEdgeDistance()"
                                 style="padding:8px 10px;font-size:11px;white-space:nowrap;">
-                                📏 자동계산
+                                자동계산
                             </button>
                         </div>
                         <div>
@@ -480,19 +480,19 @@
                 <!-- 엣지 삭제 -->
                 <details>
                     <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:10px;color:#b91c1c;">
-                        🗑 엣지 삭제
+                        엣지 삭제
                     </summary>
                     <div style="display:grid;gap:8px;">
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div>
                                 <label class="alabel">출발 노드 이름</label>
                                 <input id="deleteEdgeFrom" class="ainput" placeholder="노드 이름으로 검색">
-                                <ul id="deleteEdgeFromList" class="autocomplete-list"></ul>
+                                <ul id="deleteEdgeFromList" class="autocomplete-list autocomplete-fixed"></ul>
                             </div>
                             <div>
                                 <label class="alabel">도착 노드 이름</label>
                                 <input id="deleteEdgeTo" class="ainput" placeholder="노드 이름으로 검색">
-                                <ul id="deleteEdgeToList" class="autocomplete-list"></ul>
+                                <ul id="deleteEdgeToList" class="autocomplete-list autocomplete-fixed"></ul>
                             </div>
                         </div>
                         <p style="font-size:11px;color:#64748b;margin:0;">양방향 엣지를 한 번에 삭제합니다.</p>
@@ -500,17 +500,6 @@
                     </div>
                 </details>
 
-                <!-- 선택된 노드의 엣지 빠른 삭제 -->
-                <hr class="adivider">
-                <details>
-                    <summary style="font-weight:700;font-size:13px;cursor:pointer;margin-bottom:8px;color:#0369a1;">
-                        ⚡ 선택된 노드 기반 빠른 삭제
-                    </summary>
-                    <p style="font-size:11px;color:#64748b;margin:0 0 8px;">
-                        왼쪽 패널에서 노드를 클릭하면 연결된 엣지가 아래에 표시됩니다.
-                    </p>
-                    <div id="adminConnectedEdges" style="font-size:12px;color:#475569;"></div>
-                </details>
             </div>
 
             <!-- ══════════ 입구 탭 ══════════ -->
@@ -519,7 +508,7 @@
                     <div>
                         <label class="alabel">건물 이름</label>
                         <input id="entranceBuildingId" class="ainput" placeholder="건물 이름으로 검색">
-                        <ul id="entranceBuildingList" class="autocomplete-list"></ul>
+                        <ul id="entranceBuildingList" class="autocomplete-list autocomplete-fixed"></ul>
                     </div>
 
                     <!-- 현재 입구 목록 -->
@@ -536,7 +525,7 @@
                     <div>
                         <label class="alabel">입구 노드 이름</label>
                         <input id="entranceNodeId" class="ainput" placeholder="입구 노드 이름으로 검색">
-                        <ul id="entranceNodeList" class="autocomplete-list"></ul>
+                        <ul id="entranceNodeList" class="autocomplete-list autocomplete-fixed"></ul>
                     </div>
 
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">

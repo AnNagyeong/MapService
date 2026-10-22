@@ -1,8 +1,4 @@
-/* =============================================
-   캠퍼스 관리자 페이지
-   ============================================= */
-
-// ===== 지도 초기화 =====
+//지도 초기화 
 var map = new kakao.maps.Map(document.getElementById('map'), {
     center: new kakao.maps.LatLng(37.55843493, 127.04983095),
     level: 3
@@ -32,7 +28,6 @@ const EDGE_COLORS = {
     elevator: "#9333ea", crosswalk: "#f97316"
 };
 
-// ===== 인포윈도우 =====
 var infowindow = new kakao.maps.InfoWindow({ removable: false });
 var searchInfowindow = new kakao.maps.InfoWindow({ removable: true });
 var edgeInfowindow = new kakao.maps.InfoWindow({ removable: false });
@@ -226,17 +221,6 @@ function findNearestNodeAny(lat, lng) {
 function syncAllCheck(allId, selector) {
     const allCbs = document.querySelectorAll(selector);
     document.getElementById(allId).checked = [...allCbs].every(cb => cb.checked);
-}
-
-function updatePanoBtn(id) {
-    const p = nodeMap[id];
-    if (!p) return;
-    const btn = document.getElementById("panoBtnWrap");
-    if (!btn) return;
-    btn.style.display = "";
-    btn.querySelector("button").onclick = () => openPanoViewer(p);
-    btn.querySelector("button").textContent =
-        p.panorama_url ? "🔭 360° 사진 보기" : "🔭 360° 뷰어 열기";
 }
 
 function selectNode(id) {
@@ -651,13 +635,11 @@ function dijkstra(startId, endId, edges, wheelchair) {
     return { path, distance: Math.round(dist[endId]) };
 }
 
-// 💡 [신규 추가] 좌표 기반으로 가장 가까운 특정 타입의 노드 찾기
 function findNearestNode(lat, lng, targetType) {
     let minDist = Infinity;
     let nearest = null;
     allPoi.forEach(p => {
         if (p.type === targetType) {
-            // 기존에 만들어둔 하버사인 거리 계산 함수 재활용!
             const d = haversine(lat, lng, p.lat, p.lng);
             if (d < minDist) { minDist = d; nearest = p; }
         }
@@ -1254,7 +1236,7 @@ function onPanoTouchMove(e) {
 }
 
 /* --------------------------------------------------
-   5. 노드 선택 시 파노 버튼 (기존 기능 유지)
+   5. 노드 선택 시 파노 버튼 
 -------------------------------------------------- */
 function updatePanoBtn(id) {
     const p = nodeMap[id];

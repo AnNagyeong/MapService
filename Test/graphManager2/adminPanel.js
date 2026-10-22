@@ -33,6 +33,11 @@ function setupNameAutocomplete(inputId, listId, stateKey, onSelect) {
             });
             list.appendChild(li);
         });
+        const rect = input.getBoundingClientRect();
+        list.style.top = rect.bottom + 'px';
+        list.style.left = rect.left + 'px';
+        list.style.width = rect.width + 'px';
+        list.style.display = 'block';
         list.style.display = 'block';
     });
 }
@@ -108,6 +113,7 @@ async function adminAddPoi() {
 
         document.getElementById('totalNode').innerText =
             allPoi.filter(p => p.type !== 'building').length;
+        if (addPoiMarker) { addPoiMarker.setMap(null); addPoiMarker = null; }
 
         showToast(`✅ 노드 "${name}" 추가 완료 (ID: ${data.id})`);
     } catch (err) {
@@ -118,6 +124,7 @@ async function adminAddPoi() {
 /* ── 지도 클릭으로 좌표 자동 입력 ───────────────────────── */
 let mapClickMode = false;
 let mapClickListener = null;
+let addPoiMarker = null;
 
 function toggleMapClickMode() {
     mapClickMode = !mapClickMode;
@@ -126,15 +133,23 @@ function toggleMapClickMode() {
     if (mapClickMode) {
         btn.textContent = '📌 클릭 중... (취소)';
         btn.classList.add('active');
+        map.setCursor('crosshair');
+
         mapClickListener = kakao.maps.event.addListener(map, 'click', (mouseEvent) => {
             const latlng = mouseEvent.latLng;
             document.getElementById('addPoiLat').value = latlng.getLat().toFixed(7);
             document.getElementById('addPoiLng').value = latlng.getLng().toFixed(7);
+            if (addPoiMarker) addPoiMarker.setMap(null);
+            addPoiMarker = new kakao.maps.Marker({
+                map,
+                position: latlng,
+            });
             toggleMapClickMode(); // 한 번 클릭하면 모드 종료
         });
     } else {
         btn.textContent = '📌 지도 클릭으로 좌표 입력';
         btn.classList.remove('active');
+        map.setCursor('');
         if (mapClickListener) {
             kakao.maps.event.removeListener(mapClickListener);
             mapClickListener = null;
