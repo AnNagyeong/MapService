@@ -558,6 +558,37 @@ app.get('/api/place-accessibility', async (req, res) => {
     }
 });
 
+app.get('/api/danger-zones', async (req, res) => {
+    try {
+        await withDB(async (conn) => {
+            const [rows] = await conn.execute(
+                `SELECT report_id, place_name, category,
+                        description, latitude, longitude
+                 FROM user_report
+                 WHERE status = 'VALID'
+                   AND category IN (
+                       '급경사',
+                       '단차',
+                       '미끄러운 노면',
+                       '파손 보도',
+                       '공사 통제'
+                   )
+                   AND latitude IS NOT NULL
+                   AND longitude IS NOT NULL
+                 ORDER BY reviewed_at DESC`
+            );
+
+            res.json(rows);
+        });
+    } catch (err) {
+        console.error('승인된 위험구간 조회 오류:', err);
+        res.status(500).json({
+            ok: false,
+            error: '위험구간 조회에 실패했습니다.'
+        });
+    }
+});
+
 async function reviewAccessibilityReport(req, res, nextStatus) {
     try {
         await withDB(async (conn) => {
