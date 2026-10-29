@@ -486,7 +486,7 @@ app.get('/api/accessibility-reports', async (req, res) => {
 });
 
 app.post('/api/accessibility-reports/:id/approve', async (req, res) => {
-    await reviewAccessibilityReport(req, res, 'APPROVED');
+    await reviewAccessibilityReport(req, res, 'VALID');
 });
 
 app.post('/api/accessibility-reports/:id/reject', async (req, res) => {
@@ -586,7 +586,7 @@ async function reviewAccessibilityReport(req, res, nextStatus) {
                     [nextStatus, req.params.id]
                 );
 
-                if (nextStatus === 'APPROVED') {
+                if (nextStatus === 'VALID') {
                     await conn.execute(
                         `DELETE FROM place_accessibility
                          WHERE LOWER(place_name) = LOWER(?)
